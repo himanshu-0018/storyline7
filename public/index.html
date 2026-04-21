@@ -7,46 +7,42 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing:border-box;margin:0;padding:0; }
         body {
-            font-family: 'Inter', sans-serif;
-            background: #0a0e1a;
-            color: #e2e8f0;
-            overflow-x: hidden;
-            min-height: 100vh;
+            font-family:'Inter',sans-serif;
+            background:#0a0e1a;color:#e2e8f0;
+            overflow-x:hidden;min-height:100vh;
         }
         .bg-container {
-            position: fixed; inset: 0; z-index: 0;
-            overflow: hidden; pointer-events: none;
+            position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
         }
         .bg-photo {
-            position: absolute; inset: 0;
-            background-image: url('/bg.jpg');
-            background-size: cover; background-position: center;
-            opacity: 0.18;
-            filter: brightness(1.1) saturate(1.3) hue-rotate(10deg);
-            animation: bgZoom 50s ease-in-out infinite alternate;
+            position:absolute;inset:0;
+            background-image:url('/bg.jpg');
+            background-size:cover;background-position:center;
+            opacity:0.18;filter:brightness(1.1) saturate(1.3) hue-rotate(10deg);
+            animation:bgZoom 50s ease-in-out infinite alternate;
         }
         @keyframes bgZoom { 0%{transform:scale(1);} 100%{transform:scale(1.06);} }
         .bg-gradient {
-            position: absolute; inset: 0;
+            position:absolute;inset:0;
             background:
-                radial-gradient(ellipse at 0% 0%, rgba(99,102,241,0.25) 0%, transparent 50%),
-                radial-gradient(ellipse at 100% 0%, rgba(14,165,233,0.20) 0%, transparent 50%),
-                radial-gradient(ellipse at 100% 100%, rgba(16,185,129,0.18) 0%, transparent 50%),
-                radial-gradient(ellipse at 0% 100%, rgba(245,158,11,0.15) 0%, transparent 50%),
-                linear-gradient(135deg, rgba(10,14,26,0.82) 0%, rgba(15,20,40,0.78) 100%);
+                radial-gradient(ellipse at 0% 0%,rgba(99,102,241,0.25) 0%,transparent 50%),
+                radial-gradient(ellipse at 100% 0%,rgba(14,165,233,0.20) 0%,transparent 50%),
+                radial-gradient(ellipse at 100% 100%,rgba(16,185,129,0.18) 0%,transparent 50%),
+                radial-gradient(ellipse at 0% 100%,rgba(245,158,11,0.15) 0%,transparent 50%),
+                linear-gradient(135deg,rgba(10,14,26,0.82) 0%,rgba(15,20,40,0.78) 100%);
         }
         .bg-grid {
-            position: absolute; inset: 0;
+            position:absolute;inset:0;
             background-image:
-                linear-gradient(rgba(99,102,241,0.06) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(99,102,241,0.06) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: gridDrift 40s linear infinite;
+                linear-gradient(rgba(99,102,241,0.06) 1px,transparent 1px),
+                linear-gradient(90deg,rgba(99,102,241,0.06) 1px,transparent 1px);
+            background-size:50px 50px;
+            animation:gridDrift 40s linear infinite;
         }
         @keyframes gridDrift { 0%{transform:translate(0,0);} 100%{transform:translate(50px,50px);} }
-        .orb { position:absolute; border-radius:50%; filter:blur(60px); animation:orbFloat 15s ease-in-out infinite; }
+        .orb { position:absolute;border-radius:50%;filter:blur(60px);animation:orbFloat 15s ease-in-out infinite; }
         .orb-1 { width:400px;height:400px;background:rgba(99,102,241,0.12);top:-100px;left:-100px;animation-duration:18s; }
         .orb-2 { width:350px;height:350px;background:rgba(14,165,233,0.12);top:20%;right:-80px;animation-duration:22s;animation-delay:3s; }
         .orb-3 { width:300px;height:300px;background:rgba(16,185,129,0.10);bottom:10%;left:20%;animation-duration:16s;animation-delay:6s; }
@@ -145,9 +141,7 @@
             backdrop-filter:blur(10px);
         }
         .live-badge.offline { background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3); }
-        .pulse-dot {
-            width:7px;height:7px;border-radius:50%;background:#10b981;position:relative;
-        }
+        .pulse-dot { width:7px;height:7px;border-radius:50%;background:#10b981;position:relative; }
         .pulse-dot::after {
             content:'';position:absolute;inset:-3px;border-radius:50%;
             background:rgba(16,185,129,0.4);animation:pulseRing 1.5s ease-in-out infinite;
@@ -182,15 +176,10 @@
         .coin-section { flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(99,102,241,0.3) transparent; }
         .coin-section::-webkit-scrollbar { width:4px; }
         .coin-section::-webkit-scrollbar-thumb { background:rgba(99,102,241,0.3);border-radius:4px; }
-        .coin-grid {
-            display:grid;
-            grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
-            gap:14px;
-        }
+        .coin-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px; }
 
         .coin-card {
-            border-radius:16px;padding:16px;
-            position:relative;overflow:hidden;
+            border-radius:16px;padding:16px;position:relative;overflow:hidden;
             transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:default;
         }
         .coin-card::before {
@@ -200,7 +189,6 @@
             -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
         }
         .coin-card:hover { transform:translateY(-4px) scale(1.01); }
-
         .card-idle {
             background:linear-gradient(135deg,rgba(15,23,42,0.85),rgba(20,30,55,0.80));
             border:1px solid rgba(255,255,255,0.07);box-shadow:0 4px 20px rgba(0,0,0,0.3);
@@ -327,6 +315,7 @@
         .log-msg { font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:rgba(203,213,225,0.75);margin-top:3px; }
         .log-time { font-family:'JetBrains Mono',monospace;font-size:0.55rem; }
 
+        /* ── MODAL BASE ── */
         .modal-backdrop {
             position:fixed;inset:0;z-index:100;
             background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);
@@ -335,18 +324,18 @@
         .modal-box {
             background:linear-gradient(135deg,rgba(10,14,26,0.98),rgba(15,20,40,0.98));
             border:1px solid rgba(99,102,241,0.3);border-radius:20px;
-            padding:28px;width:100%;max-width:440px;position:relative;
+            padding:28px;width:100%;max-width:520px;position:relative;
             box-shadow:0 0 60px rgba(99,102,241,0.2),0 40px 80px rgba(0,0,0,0.6);
+            max-height:90vh;overflow-y:auto;
         }
         .modal-box::before {
-            content:'';position:absolute;top:0;left:0;right:0;height:1px;
-            border-radius:20px 20px 0 0;
+            content:'';position:absolute;top:0;left:0;right:0;height:1px;border-radius:20px 20px 0 0;
             background:linear-gradient(90deg,transparent,rgba(99,102,241,0.6),rgba(14,165,233,0.6),transparent);
         }
         .modal-box.delete-theme { border-color:rgba(239,68,68,0.3);box-shadow:0 0 60px rgba(239,68,68,0.2),0 40px 80px rgba(0,0,0,0.6); }
         .modal-box.delete-theme::before { background:linear-gradient(90deg,transparent,rgba(239,68,68,0.6),rgba(248,113,113,0.6),transparent); }
         .modal-title { font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:4px; }
-        .modal-sub { font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.55);margin-bottom:24px; }
+        .modal-sub { font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.55);margin-bottom:20px; }
         .field-label {
             font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:700;
             text-transform:uppercase;letter-spacing:0.1em;color:rgba(148,163,184,0.6);
@@ -363,8 +352,7 @@
         .delete-input:focus { border-color:rgba(239,68,68,0.6)!important;box-shadow:0 0 0 3px rgba(239,68,68,0.1)!important; }
         .btn-cancel {
             flex:1;padding:11px;border-radius:10px;
-            border:1px solid rgba(71,85,105,0.5);color:#94a3b8;
-            background:rgba(15,23,42,0.5);
+            border:1px solid rgba(71,85,105,0.5);color:#94a3b8;background:rgba(15,23,42,0.5);
             font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;
             cursor:pointer;transition:all 0.2s;
         }
@@ -391,6 +379,62 @@
             background:linear-gradient(135deg,rgba(239,68,68,0.5),rgba(153,27,27,0.35));
             color:#fee2e2;box-shadow:0 0 20px rgba(239,68,68,0.25);
         }
+
+        /* ── INJECT TF ROW ── */
+        .inject-tf-block {
+            padding:14px;border-radius:12px;margin-bottom:12px;
+            background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);
+        }
+        .inject-tf-header {
+            display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;
+        }
+        .inject-tf-title {
+            font-family:'Orbitron',sans-serif;font-size:0.75rem;font-weight:700;
+            color:#a5b4fc;letter-spacing:0.08em;
+        }
+        .inject-state-select {
+            padding:5px 10px;border-radius:8px;
+            background:rgba(15,23,42,0.8);border:1px solid rgba(99,102,241,0.3);
+            color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:0.75rem;
+            cursor:pointer;outline:none;transition:all 0.2s;
+        }
+        .inject-state-select:focus { border-color:rgba(99,102,241,0.6);box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
+        .inject-tf-fields {
+            display:grid;grid-template-columns:1fr 1fr;gap:8px;
+        }
+        .inject-tf-fields .field-input { margin-bottom:0;font-size:0.75rem;padding:8px 12px; }
+        .inject-tf-fields .field-label { margin-bottom:3px;font-size:0.5rem; }
+
+        /* Quick-fill buttons */
+        .quick-fill-row {
+            display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;
+        }
+        .quick-btn {
+            padding:5px 12px;border-radius:8px;
+            font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:700;
+            cursor:pointer;transition:all 0.2s;border:1px solid;letter-spacing:0.04em;
+        }
+        .quick-btn-bull {
+            background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);color:#34d399;
+        }
+        .quick-btn-bull:hover { background:rgba(16,185,129,0.3);color:#6ee7b7; }
+        .quick-btn-bear {
+            background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;
+        }
+        .quick-btn-bear:hover { background:rgba(239,68,68,0.3);color:#fca5a5; }
+        .quick-btn-none {
+            background:rgba(71,85,105,0.15);border-color:rgba(71,85,105,0.4);color:#94a3b8;
+        }
+        .quick-btn-none:hover { background:rgba(71,85,105,0.3);color:#cbd5e1; }
+
+        .inject-progress {
+            font-family:'JetBrains Mono',monospace;font-size:0.6rem;
+            color:rgba(148,163,184,0.5);text-align:center;margin-top:8px;display:none;
+        }
+        .inject-progress.active { display:block; }
+        .inject-progress .done { color:#34d399; }
+        .inject-progress .fail { color:#f87171; }
+
         @keyframes toastUp { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
         .toast { animation:toastUp 0.15s ease-out forwards; }
         @keyframes logoGlow { 0%,100%{box-shadow:0 0 25px rgba(99,102,241,0.4);} 50%{box-shadow:0 0 40px rgba(16,185,129,0.5);} }
@@ -422,6 +466,7 @@
         </div>
     </div>
 
+    <!-- TOP BAR -->
     <div class="top-bar">
         <div style="display:flex;align-items:center;gap:14px;">
             <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;
@@ -451,6 +496,7 @@
         </div>
     </div>
 
+    <!-- STATS BAR -->
     <div class="stats-bar">
         <span style="font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:rgba(148,163,184,0.35);letter-spacing:0.12em;text-transform:uppercase;">Market Scan</span>
         <div class="divider-v"></div>
@@ -462,6 +508,7 @@
         <span id="totalPill" class="stats-pill sp-total">📊 0 TRACKED</span>
     </div>
 
+    <!-- MAIN LAYOUT -->
     <div class="main-layout">
         <div class="coin-section">
             <div class="coin-grid" id="coinGrid">
@@ -481,44 +528,99 @@
         </div>
     </div>
 
-    <!-- INJECT MODAL -->
+    <!-- ═══════════════════════════════════════ -->
+    <!-- INJECT MODAL — ALL 3 TFs AT ONCE       -->
+    <!-- ═══════════════════════════════════════ -->
     <div class="modal-backdrop" id="modal">
-        <div class="modal-box">
-            <div class="modal-title">⚡ Cold Start Override</div>
-            <div class="modal-sub">Manually seed with 1H / 30M / 15M data.</div>
+        <div class="modal-box" style="max-width:540px;">
+            <div class="modal-title">⚡ Multi-TF Inject</div>
+            <div class="modal-sub">Set all 3 timeframes for a coin in one shot.</div>
+
+            <!-- Symbol -->
             <label class="field-label">Symbol</label>
             <input type="text" id="injSymbol" class="field-input" placeholder="e.g. BTCUSDT" style="text-transform:uppercase;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div>
-                    <label class="field-label">Timeframe</label>
-                    <select id="injTf" class="field-input" style="cursor:pointer;">
-                        <option value="1H">1 Hour (1H)</option>
-                        <option value="30M">30 Min (30M)</option>
-                        <option value="15M">15 Min (15M)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="field-label">State</label>
-                    <select id="injState" class="field-input" style="cursor:pointer;">
+
+            <!-- Quick Fill Buttons -->
+            <div class="quick-fill-row">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:rgba(148,163,184,0.4);align-self:center;margin-right:4px;">QUICK FILL ALL:</span>
+                <button class="quick-btn quick-btn-bull" onclick="quickFillAll('BULLISH')">🐂 ALL BULLISH</button>
+                <button class="quick-btn quick-btn-bear" onclick="quickFillAll('BEARISH')">🐻 ALL BEARISH</button>
+                <button class="quick-btn quick-btn-none" onclick="quickFillAll('NONE')">— ALL NONE</button>
+            </div>
+
+            <!-- 1H Block -->
+            <div class="inject-tf-block">
+                <div class="inject-tf-header">
+                    <span class="inject-tf-title">1H — 1 HOUR</span>
+                    <select id="inj1hState" class="inject-state-select">
+                        <option value="NONE">⚪ NONE</option>
                         <option value="BULLISH">🟢 BULLISH</option>
                         <option value="BEARISH">🔴 BEARISH</option>
-                        <option value="NONE">⚪ NONE</option>
                     </select>
                 </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div>
-                    <label class="field-label">BO Price</label>
-                    <input type="number" id="injBo" step="any" class="field-input" placeholder="e.g. 65000">
+                <div class="inject-tf-fields">
+                    <div>
+                        <label class="field-label">BO Price</label>
+                        <input type="number" id="inj1hBo" step="any" class="field-input" placeholder="optional">
+                    </div>
+                    <div>
+                        <label class="field-label">SL Price</label>
+                        <input type="number" id="inj1hSl" step="any" class="field-input" placeholder="optional">
+                    </div>
                 </div>
-                <div>
-                    <label class="field-label">SL Price</label>
-                    <input type="number" id="injSl" step="any" class="field-input" placeholder="e.g. 64520">
+            </div>
+
+            <!-- 30M Block -->
+            <div class="inject-tf-block">
+                <div class="inject-tf-header">
+                    <span class="inject-tf-title">30M — 30 MIN</span>
+                    <select id="inj30mState" class="inject-state-select">
+                        <option value="NONE">⚪ NONE</option>
+                        <option value="BULLISH">🟢 BULLISH</option>
+                        <option value="BEARISH">🔴 BEARISH</option>
+                    </select>
+                </div>
+                <div class="inject-tf-fields">
+                    <div>
+                        <label class="field-label">BO Price</label>
+                        <input type="number" id="inj30mBo" step="any" class="field-input" placeholder="optional">
+                    </div>
+                    <div>
+                        <label class="field-label">SL Price</label>
+                        <input type="number" id="inj30mSl" step="any" class="field-input" placeholder="optional">
+                    </div>
                 </div>
             </div>
+
+            <!-- 15M Block -->
+            <div class="inject-tf-block">
+                <div class="inject-tf-header">
+                    <span class="inject-tf-title">15M — 15 MIN</span>
+                    <select id="inj15mState" class="inject-state-select">
+                        <option value="NONE">⚪ NONE</option>
+                        <option value="BULLISH">🟢 BULLISH</option>
+                        <option value="BEARISH">🔴 BEARISH</option>
+                    </select>
+                </div>
+                <div class="inject-tf-fields">
+                    <div>
+                        <label class="field-label">BO Price</label>
+                        <input type="number" id="inj15mBo" step="any" class="field-input" placeholder="optional">
+                    </div>
+                    <div>
+                        <label class="field-label">SL Price</label>
+                        <input type="number" id="inj15mSl" step="any" class="field-input" placeholder="optional">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress -->
+            <div class="inject-progress" id="injProgress"></div>
+
+            <!-- Buttons -->
             <div style="display:flex;gap:10px;margin-top:8px;">
                 <button onclick="closeModal()" class="btn-cancel">CANCEL</button>
-                <button onclick="doInject()" id="injBtn" class="btn-inject-modal">INJECT ⚡</button>
+                <button onclick="doInject()" id="injBtn" class="btn-inject-modal">INJECT ALL ⚡</button>
             </div>
         </div>
     </div>
@@ -566,28 +668,107 @@
             setTimeout(()=>t.remove(),1100);
         };
 
-        const openModal=()=>{document.getElementById('modal').style.display='flex';};
-        const closeModal=()=>{document.getElementById('modal').style.display='none';['injSymbol','injBo','injSl'].forEach(id=>document.getElementById(id).value='');};
+        // ══════════════════════════════════
+        // INJECT MODAL — MULTI-TF
+        // ══════════════════════════════════
+        const openModal = () => { document.getElementById('modal').style.display='flex'; };
+        const closeModal = () => {
+            document.getElementById('modal').style.display='none';
+            document.getElementById('injSymbol').value='';
+            ['inj1hState','inj30mState','inj15mState'].forEach(id => document.getElementById(id).value='NONE');
+            ['inj1hBo','inj1hSl','inj30mBo','inj30mSl','inj15mBo','inj15mSl'].forEach(id => document.getElementById(id).value='');
+            const prog = document.getElementById('injProgress');
+            prog.innerHTML=''; prog.classList.remove('active');
+        };
         document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 
-        async function doInject() {
-            const sym=document.getElementById('injSymbol').value.toUpperCase().trim();
-            const tf=document.getElementById('injTf').value;
-            const state=document.getElementById('injState').value;
-            const bo=document.getElementById('injBo').value;
-            const sl=document.getElementById('injSl').value;
-            const btn=document.getElementById('injBtn');
-            if(!sym) return alert('Please enter a symbol.');
-            const p={symbol:sym,tf,state};
-            if(bo&&!isNaN(bo)) p.bo=parseFloat(bo);
-            if(sl&&!isNaN(sl)) p.sl=parseFloat(sl);
-            btn.textContent='SENDING...';
-            try {
-                const r=await fetch('/webhook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
-                if(r.ok){closeModal();btn.textContent='INJECT ⚡';}else throw new Error();
-            } catch{alert('Failed.');btn.textContent='INJECT ⚡';}
+        function quickFillAll(state) {
+            document.getElementById('inj1hState').value  = state;
+            document.getElementById('inj30mState').value = state;
+            document.getElementById('inj15mState').value = state;
         }
 
+        async function doInject() {
+            const sym = document.getElementById('injSymbol').value.toUpperCase().trim();
+            const btn = document.getElementById('injBtn');
+            const prog = document.getElementById('injProgress');
+
+            if (!sym) return alert('Please enter a symbol.');
+
+            const tfs = [
+                {
+                    tf: '1H',
+                    state: document.getElementById('inj1hState').value,
+                    bo: document.getElementById('inj1hBo').value,
+                    sl: document.getElementById('inj1hSl').value
+                },
+                {
+                    tf: '30M',
+                    state: document.getElementById('inj30mState').value,
+                    bo: document.getElementById('inj30mBo').value,
+                    sl: document.getElementById('inj30mSl').value
+                },
+                {
+                    tf: '15M',
+                    state: document.getElementById('inj15mState').value,
+                    bo: document.getElementById('inj15mBo').value,
+                    sl: document.getElementById('inj15mSl').value
+                }
+            ];
+
+            // Filter — only send TFs that have a state set (not NONE, or user explicitly set NONE)
+            const toSend = tfs.filter(t => t.state);
+            if (toSend.length === 0) return alert('Set at least one timeframe state.');
+
+            btn.textContent = 'INJECTING...';
+            btn.style.pointerEvents = 'none';
+            prog.innerHTML = '';
+            prog.classList.add('active');
+
+            let success = 0;
+            let fail = 0;
+
+            for (const t of toSend) {
+                const payload = { symbol: sym, tf: t.tf, state: t.state };
+                if (t.bo && !isNaN(t.bo)) payload.bo = parseFloat(t.bo);
+                if (t.sl && !isNaN(t.sl)) payload.sl = parseFloat(t.sl);
+
+                try {
+                    const r = await fetch('/webhook', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (r.ok) {
+                        success++;
+                        prog.innerHTML += `<span class="done">✅ ${t.tf} → ${t.state}</span><br>`;
+                    } else {
+                        fail++;
+                        prog.innerHTML += `<span class="fail">❌ ${t.tf} failed (${r.status})</span><br>`;
+                    }
+                } catch (err) {
+                    fail++;
+                    prog.innerHTML += `<span class="fail">❌ ${t.tf} error</span><br>`;
+                }
+
+                // Small delay between calls to let server process sequentially
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            if (fail === 0) {
+                prog.innerHTML += `<br><span class="done">🎯 All ${success} timeframes injected for ${sym}!</span>`;
+                setTimeout(() => { closeModal(); }, 1200);
+            } else {
+                prog.innerHTML += `<br><span class="fail">⚠️ ${fail} failed, ${success} succeeded</span>`;
+            }
+
+            btn.textContent = 'INJECT ALL ⚡';
+            btn.style.pointerEvents = 'auto';
+        }
+
+        // ══════════════════════════════════
+        // DELETE MODAL
+        // ══════════════════════════════════
         const openDeleteModal=()=>{document.getElementById('deleteModal').style.display='flex';};
         const closeDeleteModal=()=>{document.getElementById('deleteModal').style.display='none';document.getElementById('delSymbol').value='';};
         document.getElementById('deleteModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDeleteModal();});
@@ -603,6 +784,9 @@
             } catch{alert('Purge Failed.');btn.textContent='PURGE 🗑️';}
         }
 
+        // ══════════════════════════════════
+        // ACTIVITY LOG
+        // ══════════════════════════════════
         let actLog=[];
         function fmtTime(ts) {
             if(!ts) return '';
@@ -633,6 +817,9 @@
             if(actLog.length>100) actLog=actLog.slice(0,100);
         }
 
+        // ══════════════════════════════════
+        // RENDER
+        // ══════════════════════════════════
         function tfCls(s){return s==='BULLISH'?'tf-cell-bull':s==='BEARISH'?'tf-cell-bear':'tf-cell-none';}
         function tfEmo(s){return s==='BULLISH'?'🐂':s==='BEARISH'?'🐻':'—';}
 
@@ -700,7 +887,6 @@
                             </div>
                             ${badge}
                         </div>
-
                         <div class="tf-row">
                             <div class="tf-cell ${tfCls(tfs['1H'])}">
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -724,14 +910,15 @@
                                 <div style="color:rgba(203,213,225,0.6);font-size:0.5rem;">${tfs['15M']||'NONE'}</div>
                             </div>
                         </div>
-
                         <div class="align-bar ${alignBarCls}">${alignBarTxt}</div>
                     </div>
                 `);
             });
         }
 
-        // INITIAL LOAD + SSE
+        // ══════════════════════════════════
+        // INIT + SSE
+        // ══════════════════════════════════
         fetch('/api/state').then(r=>r.json()).then(data=>{
             const ms=data.marketState||data;
             const log=data.activityLog||[];
