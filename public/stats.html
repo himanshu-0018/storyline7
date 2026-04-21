@@ -13,9 +13,7 @@
             background:#0a0e1a;color:#e2e8f0;
             min-height:100vh;overflow-x:hidden;
         }
-        .bg-container {
-            position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
-        }
+        .bg-container { position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none; }
         .bg-gradient {
             position:absolute;inset:0;
             background:
@@ -65,51 +63,75 @@
             border-color:rgba(239,68,68,0.5);color:#fca5a5;
         }
         .btn-clear:hover { background:linear-gradient(135deg,rgba(239,68,68,0.4),rgba(153,27,27,0.25));color:#fee2e2; }
-        .btn-refresh {
-            background:linear-gradient(135deg,rgba(16,185,129,0.25),rgba(52,211,153,0.15));
-            border-color:rgba(16,185,129,0.5);color:#34d399;
-        }
-        .btn-refresh:hover { background:linear-gradient(135deg,rgba(16,185,129,0.4),rgba(52,211,153,0.25));color:#6ee7b7; }
 
-        .main-content {
-            position:relative;z-index:10;padding:24px;
-            max-width:1400px;margin:0 auto;
+        .live-dot {
+            width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;
+            animation:livePulse 1.5s ease-in-out infinite;margin-right:6px;
+        }
+        @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.4;transform:scale(1.3);} }
+        .live-label {
+            font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;color:#34d399;
+            display:inline-flex;align-items:center;
+            padding:5px 12px;border-radius:8px;
+            background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);
         }
 
-        /* Global Summary Cards */
+        .main-content { position:relative;z-index:10;padding:24px;max-width:1400px;margin:0 auto; }
+
         .summary-row {
-            display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-            gap:12px;margin-bottom:24px;
+            display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+            gap:10px;margin-bottom:20px;
         }
         .summary-card {
-            padding:16px;border-radius:14px;
+            padding:14px;border-radius:14px;
             background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.08);
             backdrop-filter:blur(10px);text-align:center;
         }
         .summary-card .sc-val {
-            font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;
+            font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;
             line-height:1;margin-bottom:4px;
         }
         .summary-card .sc-label {
-            font-family:'JetBrains Mono',monospace;font-size:0.6rem;
+            font-family:'JetBrains Mono',monospace;font-size:0.55rem;
             color:rgba(148,163,184,0.5);text-transform:uppercase;letter-spacing:0.1em;
         }
-        .sc-signals  .sc-val { color:#38bdf8; }
-        .sc-entries   .sc-val { color:#a78bfa; }
-        .sc-tp        .sc-val { color:#34d399; }
-        .sc-sl        .sc-val { color:#f87171; }
-        .sc-winrate   .sc-val { color:#fbbf24; }
-        .sc-pending   .sc-val { color:#94a3b8; }
+        .sc-signals .sc-val { color:#38bdf8; }
+        .sc-entries .sc-val { color:#a78bfa; }
+        .sc-tp .sc-val { color:#34d399; }
+        .sc-sl .sc-val { color:#f87171; }
+        .sc-winrate .sc-val { color:#fbbf24; }
+        .sc-pending .sc-val { color:#94a3b8; }
 
-        /* Filter Bar */
+        /* Alignment summary row */
+        .align-summary-row {
+            display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;
+        }
+        .align-summary-card {
+            padding:14px 18px;border-radius:14px;
+            background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.08);
+            backdrop-filter:blur(10px);
+        }
+        .asc-title {
+            font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;
+            letter-spacing:0.08em;margin-bottom:10px;
+        }
+        .asc-god .asc-title { color:#34d399; }
+        .asc-partial .asc-title { color:#fbbf24; }
+        .asc-row {
+            display:flex;align-items:center;gap:12px;
+            font-family:'JetBrains Mono',monospace;font-size:0.7rem;
+        }
+        .asc-stat {
+            display:flex;align-items:center;gap:4px;
+        }
+
         .filter-bar {
             display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;
         }
         .filter-btn {
             padding:6px 14px;border-radius:8px;
             font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;
-            cursor:pointer;transition:all 0.2s;border:1px solid;
-            letter-spacing:0.04em;
+            cursor:pointer;transition:all 0.2s;border:1px solid;letter-spacing:0.04em;
         }
         .filter-btn.active {
             background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(251,191,36,0.15));
@@ -121,9 +143,8 @@
         }
         .filter-btn:not(.active):hover { border-color:rgba(100,116,139,0.6);color:#94a3b8; }
 
-        /* Coin Stats Cards */
         .coin-stats-grid {
-            display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+            display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
             gap:16px;
         }
         .coin-stats-card {
@@ -136,7 +157,7 @@
             background:linear-gradient(90deg,transparent,rgba(245,158,11,0.5),rgba(251,191,36,0.5),transparent);
         }
         .csc-header {
-            display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;
+            display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;
         }
         .csc-symbol {
             font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;color:#f1f5f9;
@@ -150,45 +171,77 @@
         .wr-bad { background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171; }
         .wr-na { background:rgba(71,85,105,0.2);border:1px solid rgba(71,85,105,0.4);color:#64748b; }
 
-        /* TF Breakdown Table */
-        .tf-table {
-            width:100%;border-collapse:collapse;margin-top:8px;
-        }
+        .tf-table { width:100%;border-collapse:collapse;margin-top:6px; }
         .tf-table th {
-            font-family:'JetBrains Mono',monospace;font-size:0.5rem;font-weight:700;
+            font-family:'JetBrains Mono',monospace;font-size:0.48rem;font-weight:700;
             text-transform:uppercase;letter-spacing:0.1em;color:rgba(148,163,184,0.4);
-            padding:6px 8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06);
+            padding:5px 6px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06);
         }
         .tf-table th:first-child { text-align:left; }
         .tf-table td {
-            font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:600;
-            padding:8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);
+            font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:600;
+            padding:6px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);
         }
-        .tf-table td:first-child {
-            text-align:left;color:rgba(203,213,225,0.7);font-size:0.65rem;
-        }
-        .tf-table .td-signals { color:#38bdf8; }
-        .tf-table .td-entries { color:#a78bfa; }
-        .tf-table .td-tp { color:#34d399; }
-        .tf-table .td-sl { color:#f87171; }
-        .tf-table .td-wr { color:#fbbf24; }
-        .tf-table .td-active { color:#94a3b8; }
+        .tf-table td:first-child { text-align:left;color:rgba(203,213,225,0.7);font-size:0.6rem; }
+        .td-signals { color:#38bdf8; }
+        .td-entries { color:#a78bfa; }
+        .td-tp { color:#34d399; }
+        .td-sl { color:#f87171; }
+        .td-wr { color:#fbbf24; }
+        .td-active { color:#94a3b8; }
 
-        /* Recent trades list */
+        /* Alignment breakdown inside coin card */
+        .align-breakdown {
+            margin-top:10px;padding:10px;border-radius:10px;
+            background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.05);
+        }
+        .ab-title {
+            font-family:'JetBrains Mono',monospace;font-size:0.5rem;font-weight:700;
+            text-transform:uppercase;letter-spacing:0.1em;color:rgba(148,163,184,0.4);
+            margin-bottom:8px;
+        }
+        .ab-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+        .ab-cell {
+            padding:8px;border-radius:8px;
+            font-family:'JetBrains Mono',monospace;font-size:0.58rem;
+        }
+        .ab-god {
+            background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
+        }
+        .ab-partial {
+            background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);
+        }
+        .ab-cell-title {
+            font-size:0.5rem;font-weight:700;letter-spacing:0.08em;margin-bottom:4px;
+        }
+        .ab-god .ab-cell-title { color:#34d399; }
+        .ab-partial .ab-cell-title { color:#fbbf24; }
+        .ab-stat-row {
+            display:flex;align-items:center;gap:8px;margin-top:2px;
+        }
+
         .recent-header {
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;
+            font-family:'JetBrains Mono',monospace;font-size:0.5rem;font-weight:700;
             color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.1em;
-            margin-top:12px;margin-bottom:6px;
+            margin-top:10px;margin-bottom:6px;
         }
         .trade-row {
-            display:flex;align-items:center;gap:6px;
+            display:flex;align-items:center;gap:5px;
             padding:5px 8px;border-radius:6px;margin-bottom:3px;
-            font-family:'JetBrains Mono',monospace;font-size:0.58rem;
+            font-family:'JetBrains Mono',monospace;font-size:0.55rem;
         }
         .trade-row.tr-tp { background:rgba(16,185,129,0.08);border-left:2px solid #10b981; }
         .trade-row.tr-sl { background:rgba(239,68,68,0.08);border-left:2px solid #ef4444; }
         .trade-row.tr-active { background:rgba(99,102,241,0.08);border-left:2px solid #6366f1; }
         .trade-row.tr-signal { background:rgba(71,85,105,0.08);border-left:2px solid #475569; }
+
+        .align-tag {
+            font-size:0.45rem;font-weight:700;padding:1px 5px;border-radius:4px;
+            letter-spacing:0.06em;
+        }
+        .align-tag-god { background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.3); }
+        .align-tag-partial { background:rgba(245,158,11,0.2);color:#fbbf24;border:1px solid rgba(245,158,11,0.3); }
+        .align-tag-none { background:rgba(71,85,105,0.2);color:#64748b;border:1px solid rgba(71,85,105,0.3); }
 
         .empty-stats {
             font-family:'JetBrains Mono',monospace;font-size:0.8rem;
@@ -267,13 +320,13 @@
                 display:flex;align-items:center;justify-content:center;font-size:1.3rem;">📊</div>
             <div>
                 <div class="brand-name">TRADE STATISTICS</div>
-                <div class="brand-sub">ENTRY / TP / SL TRACKING · PER COIN · PER TIMEFRAME</div>
+                <div class="brand-sub">ENTRY / TP / SL · PER COIN · PER TF · PER ALIGNMENT</div>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <a href="/" class="ctrl-btn btn-back"><span>⚡</span> DASHBOARD</a>
-            <button onclick="loadStats()" class="ctrl-btn btn-refresh"><span>🔄</span> REFRESH</button>
             <button onclick="openClearModal()" class="ctrl-btn btn-clear"><span>🗑️</span> CLEAR STATS</button>
+            <div class="live-label" id="liveStatus"><span class="live-dot"></span>LIVE</div>
         </div>
     </div>
 
@@ -288,27 +341,48 @@
             <div class="summary-card sc-pending"><div class="sc-val" id="gPending">0</div><div class="sc-label">Active/Pending</div></div>
         </div>
 
+        <!-- Global Alignment Breakdown -->
+        <div class="align-summary-row">
+            <div class="align-summary-card asc-god">
+                <div class="asc-title">✅ GOD-MODE (3/3) PERFORMANCE</div>
+                <div class="asc-row">
+                    <div class="asc-stat"><span style="color:rgba(148,163,184,0.5);">Signals:</span> <span id="gGodSig" style="color:#38bdf8;font-weight:800;">0</span></div>
+                    <div class="asc-stat"><span style="color:rgba(148,163,184,0.5);">TP:</span> <span id="gGodTP" style="color:#34d399;font-weight:800;">0</span></div>
+                    <div class="asc-stat"><span style="color:rgba(148,163,184,0.5);">SL:</span> <span id="gGodSL" style="color:#f87171;font-weight:800;">0</span></div>
+                    <div class="asc-stat"><span style="color:rgba(148,163,184,0.5);">WR:</span> <span id="gGodWR" style="color:#fbbf24;font-weight:800;">—</span></div>
+                </div>
+            </div>
+            <div class="align-summary-card asc-partial">
+                <div class="asc-title">⚡ PARTIAL (2/3) PERFORMANCE</div>
+                <div class="asc-row">
+                    <div class="asc-stat"><span style="color:rgba(148,163,184,0.5);">Signals:</span> <span id="gPartSig" style="color:#38bdf8;font-weight:800;">0</span></div>
+                    <div class="asc-stat"><span style="color:rgba(148,163,184,0.5);">TP:</span> <span id="gPartTP" style="color:#34d399;font-weight:800;">0</span></div>
+                    <div class="asc-stat"><span style="color:rgba(148,163,184,0.5);">SL:</span> <span id="gPartSL" style="color:#f87171;font-weight:800;">0</span></div>
+                    <div class="asc-stat"><span style="color:rgba(148,163,184,0.5);">WR:</span> <span id="gPartWR" style="color:#fbbf24;font-weight:800;">—</span></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Filters -->
         <div class="filter-bar">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:rgba(148,163,184,0.4);letter-spacing:0.1em;">FILTER TF:</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:rgba(148,163,184,0.4);letter-spacing:0.1em;">FILTER:</span>
             <button class="filter-btn active" data-tf="ALL" onclick="setFilter('ALL',this)">ALL</button>
             <button class="filter-btn" data-tf="5M" onclick="setFilter('5M',this)">5M</button>
             <button class="filter-btn" data-tf="3M" onclick="setFilter('3M',this)">3M</button>
             <button class="filter-btn" data-tf="1M" onclick="setFilter('1M',this)">1M</button>
         </div>
 
-        <!-- Coin Stats Grid -->
         <div class="coin-stats-grid" id="statsGrid">
-            <div class="empty-stats">Loading statistics...</div>
+            <div class="empty-stats">Connecting to live feed...</div>
         </div>
     </div>
 
-    <!-- Clear Stats Modal -->
+    <!-- Clear Modal -->
     <div class="modal-backdrop" id="clearModal">
         <div class="modal-box">
             <div class="modal-title">🗑️ Clear Trade Statistics</div>
             <div class="modal-sub">Remove trade history for a specific coin or all coins.</div>
-            <label class="field-label">Symbol (or leave blank for specific coin)</label>
+            <label class="field-label">Symbol</label>
             <input type="text" id="clearSymbol" class="field-input" placeholder="e.g. BTCUSDT">
             <div style="display:flex;gap:10px;">
                 <button onclick="closeClearModal()" class="btn-cancel">CANCEL</button>
@@ -329,20 +403,13 @@
         async function doClearSymbol() {
             const sym = document.getElementById('clearSymbol').value.toUpperCase().trim();
             if (!sym) return alert('Enter a symbol to clear.');
-            try {
-                await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:sym}) });
-                closeClearModal();
-                loadStats();
-            } catch { alert('Failed to clear stats.'); }
+            await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:sym}) });
+            closeClearModal();
         }
-
         async function doClearAll() {
-            if (!confirm('Are you sure you want to clear ALL trade statistics?')) return;
-            try {
-                await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:'ALL'}) });
-                closeClearModal();
-                loadStats();
-            } catch { alert('Failed to clear stats.'); }
+            if (!confirm('Clear ALL trade statistics?')) return;
+            await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:'ALL'}) });
+            closeClearModal();
         }
 
         function setFilter(tf, btn) {
@@ -359,33 +426,26 @@
                    d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
         }
 
-        function calcWinRate(tp, sl) {
-            const total = tp + sl;
-            if (total === 0) return { pct: null, cls: 'wr-na', txt: 'N/A' };
-            const pct = ((tp / total) * 100).toFixed(1);
-            let cls = 'wr-mid';
-            if (pct >= 60) cls = 'wr-good';
-            else if (pct < 40) cls = 'wr-bad';
-            return { pct, cls, txt: pct + '%' };
+        function calcWR(tp, sl) {
+            const t = tp + sl;
+            if (t === 0) return { pct: null, cls: 'wr-na', txt: 'N/A' };
+            const p = ((tp / t) * 100).toFixed(1);
+            return { pct: p, cls: p >= 60 ? 'wr-good' : p < 40 ? 'wr-bad' : 'wr-mid', txt: p + '%' };
         }
 
-        async function loadStats() {
-            try {
-                const r = await fetch('/api/stats');
-                const data = await r.json();
-                currentStats = data.tradeStats || {};
-                renderStats();
-            } catch (err) {
-                console.error('Failed to load stats:', err);
-            }
+        function getAlignTag(align) {
+            if (align === 'GOD') return '<span class="align-tag align-tag-god">GOD</span>';
+            if (align === 'PARTIAL') return '<span class="align-tag align-tag-partial">2/3</span>';
+            return '<span class="align-tag align-tag-none">—</span>';
         }
 
         function renderStats() {
             const grid = document.getElementById('statsGrid');
             const tfsToShow = currentFilter === 'ALL' ? ['5M', '3M', '1M'] : [currentFilter];
 
-            // Global totals
-            let gSignals=0, gEntries=0, gTP=0, gSL=0, gPending=0, gActive=0;
+            let gSig=0,gEnt=0,gTP=0,gSL=0,gPend=0;
+            let gGodSig=0,gGodTP=0,gGodSL=0;
+            let gPartSig=0,gPartTP=0,gPartSL=0;
 
             const symbols = Object.keys(currentStats).sort();
 
@@ -393,115 +453,121 @@
                 tfsToShow.forEach(tf => {
                     const s = currentStats[sym]?.[tf];
                     if (s) {
-                        gSignals += s.total_signals || 0;
-                        gEntries += s.total_entries || 0;
-                        gTP += s.tp_hits || 0;
-                        gSL += s.sl_hits || 0;
-                        gPending += (s.pending || 0) + (s.active || 0);
+                        gSig += s.total_signals||0;
+                        gEnt += s.total_entries||0;
+                        gTP += s.tp_hits||0;
+                        gSL += s.sl_hits||0;
+                        gPend += (s.pending||0)+(s.active||0);
+                        gGodSig += s.god_signals||0;
+                        gGodTP += s.god_tp||0;
+                        gGodSL += s.god_sl||0;
+                        gPartSig += s.partial_signals||0;
+                        gPartTP += s.partial_tp||0;
+                        gPartSL += s.partial_sl||0;
                     }
                 });
             });
 
-            const gWR = calcWinRate(gTP, gSL);
-            document.getElementById('gSignals').textContent = gSignals;
-            document.getElementById('gEntries').textContent = gEntries;
+            const gWR = calcWR(gTP, gSL);
+            const godWR = calcWR(gGodTP, gGodSL);
+            const partWR = calcWR(gPartTP, gPartSL);
+
+            document.getElementById('gSignals').textContent = gSig;
+            document.getElementById('gEntries').textContent = gEnt;
             document.getElementById('gTP').textContent = gTP;
             document.getElementById('gSL').textContent = gSL;
             document.getElementById('gWR').textContent = gWR.txt;
-            document.getElementById('gPending').textContent = gPending;
+            document.getElementById('gPending').textContent = gPend;
+            document.getElementById('gGodSig').textContent = gGodSig;
+            document.getElementById('gGodTP').textContent = gGodTP;
+            document.getElementById('gGodSL').textContent = gGodSL;
+            document.getElementById('gGodWR').textContent = godWR.txt;
+            document.getElementById('gPartSig').textContent = gPartSig;
+            document.getElementById('gPartTP').textContent = gPartTP;
+            document.getElementById('gPartSL').textContent = gPartSL;
+            document.getElementById('gPartWR').textContent = partWR.txt;
 
-            if (symbols.length === 0) {
-                grid.innerHTML = '<div class="empty-stats">No trade statistics recorded yet.<br>Signals will appear here as they fire.</div>';
+            if (!symbols.length) {
+                grid.innerHTML = '<div class="empty-stats">No trade statistics yet.</div>';
                 return;
             }
 
-            // Filter symbols that have data for selected TFs
-            const filteredSymbols = symbols.filter(sym => {
-                return tfsToShow.some(tf => currentStats[sym]?.[tf]?.total_signals > 0);
-            });
+            const filtered = symbols.filter(sym =>
+                tfsToShow.some(tf => currentStats[sym]?.[tf]?.total_signals > 0)
+            );
 
-            if (filteredSymbols.length === 0) {
-                grid.innerHTML = `<div class="empty-stats">No data for ${currentFilter} timeframe yet.</div>`;
+            if (!filtered.length) {
+                grid.innerHTML = `<div class="empty-stats">No data for ${currentFilter} timeframe.</div>`;
                 return;
             }
 
-            // Sort by total signals desc
-            filteredSymbols.sort((a, b) => {
-                let aTotal=0, bTotal=0;
-                tfsToShow.forEach(tf => {
-                    aTotal += currentStats[a]?.[tf]?.total_signals || 0;
-                    bTotal += currentStats[b]?.[tf]?.total_signals || 0;
-                });
-                return bTotal - aTotal;
+            filtered.sort((a,b) => {
+                let at=0,bt=0;
+                tfsToShow.forEach(tf => { at+=currentStats[a]?.[tf]?.total_signals||0; bt+=currentStats[b]?.[tf]?.total_signals||0; });
+                return bt-at;
             });
 
             grid.innerHTML = '';
 
-            filteredSymbols.forEach(sym => {
-                let totalSig=0, totalEnt=0, totalTP=0, totalSL=0, totalPend=0, totalAct=0;
+            filtered.forEach(sym => {
+                let tSig=0,tEnt=0,tTP=0,tSL=0,tPend=0,tAct=0;
+                let cGodTP=0,cGodSL=0,cGodSig=0,cPartTP=0,cPartSL=0,cPartSig=0;
                 let allTrades = [];
-
                 let tableRows = '';
+
                 tfsToShow.forEach(tf => {
                     const s = currentStats[sym]?.[tf];
                     if (!s || s.total_signals === 0) return;
 
-                    totalSig += s.total_signals;
-                    totalEnt += s.total_entries;
-                    totalTP += s.tp_hits;
-                    totalSL += s.sl_hits;
-                    totalPend += s.pending || 0;
-                    totalAct += s.active || 0;
+                    tSig+=s.total_signals; tEnt+=s.total_entries;
+                    tTP+=s.tp_hits; tSL+=s.sl_hits;
+                    tPend+=s.pending||0; tAct+=s.active||0;
+                    cGodTP+=s.god_tp||0; cGodSL+=s.god_sl||0; cGodSig+=s.god_signals||0;
+                    cPartTP+=s.partial_tp||0; cPartSL+=s.partial_sl||0; cPartSig+=s.partial_signals||0;
 
-                    const wr = calcWinRate(s.tp_hits, s.sl_hits);
+                    const wr = calcWR(s.tp_hits, s.sl_hits);
+                    tableRows += `<tr>
+                        <td>${tf}</td>
+                        <td class="td-signals">${s.total_signals}</td>
+                        <td class="td-entries">${s.total_entries}</td>
+                        <td class="td-tp">${s.tp_hits}</td>
+                        <td class="td-sl">${s.sl_hits}</td>
+                        <td class="td-wr">${wr.txt}</td>
+                        <td class="td-active">${(s.pending||0)+(s.active||0)}</td>
+                    </tr>`;
 
-                    tableRows += `
-                        <tr>
-                            <td>${tf}</td>
-                            <td class="td-signals">${s.total_signals}</td>
-                            <td class="td-entries">${s.total_entries}</td>
-                            <td class="td-tp">${s.tp_hits}</td>
-                            <td class="td-sl">${s.sl_hits}</td>
-                            <td class="td-wr">${wr.txt}</td>
-                            <td class="td-active">${(s.pending||0)+(s.active||0)}</td>
-                        </tr>
-                    `;
-
-                    if (s.trades) {
-                        allTrades = allTrades.concat(s.trades.map(t => ({...t, _tf: tf})));
-                    }
+                    if (s.trades) allTrades = allTrades.concat(s.trades.map(t=>({...t,_tf:tf})));
                 });
 
                 if (!tableRows) return;
 
-                const wr = calcWinRate(totalTP, totalSL);
+                const wr = calcWR(tTP, tSL);
+                const godWr = calcWR(cGodTP, cGodSL);
+                const partWr = calcWR(cPartTP, cPartSL);
 
-                // Recent trades (last 8)
-                allTrades.sort((a,b) => (b.signal_time||0) - (a.signal_time||0));
+                allTrades.sort((a,b)=>(b.signal_time||0)-(a.signal_time||0));
                 const recent = allTrades.slice(0, 8);
 
                 let recentHTML = '';
                 recent.forEach(t => {
-                    let cls, icon, statusTxt;
-                    if (t.status === 'TP_HIT') { cls='tr-tp'; icon='🎯'; statusTxt='TP HIT'; }
-                    else if (t.status === 'SL_HIT') { cls='tr-sl'; icon='💀'; statusTxt='SL HIT'; }
-                    else if (t.status === 'ACTIVE') { cls='tr-active'; icon='📥'; statusTxt='ACTIVE'; }
-                    else { cls='tr-signal'; icon='📡'; statusTxt='SIGNAL'; }
+                    let cls,icon,stxt;
+                    if(t.status==='TP_HIT'){cls='tr-tp';icon='🎯';stxt='TP';}
+                    else if(t.status==='SL_HIT'){cls='tr-sl';icon='💀';stxt='SL';}
+                    else if(t.status==='ACTIVE'){cls='tr-active';icon='📥';stxt='ACTIVE';}
+                    else{cls='tr-signal';icon='📡';stxt='SIGNAL';}
+                    const di=t.direction==='BULLISH'?'🐂':'🐻';
+                    const tm=fmtTime(t.result_time||t.entry_time||t.signal_time);
+                    const at=getAlignTag(t.alignment||'NONE');
 
-                    const dirIcon = t.direction === 'BULLISH' ? '🐂' : '🐻';
-                    const time = fmtTime(t.result_time || t.entry_time || t.signal_time);
-
-                    recentHTML += `
-                        <div class="trade-row ${cls}">
-                            <span>${icon}</span>
-                            <span>${dirIcon}</span>
-                            <span style="color:rgba(203,213,225,0.6);">${t._tf}</span>
-                            <span style="color:#38bdf8;">${t.entry}</span>
-                            <span style="color:rgba(148,163,184,0.4);">→</span>
-                            <span style="color:${t.status==='TP_HIT'?'#34d399':t.status==='SL_HIT'?'#f87171':'#94a3b8'};">${statusTxt}</span>
-                            <span style="margin-left:auto;color:rgba(148,163,184,0.35);font-size:0.5rem;">${time}</span>
-                        </div>
-                    `;
+                    recentHTML+=`<div class="trade-row ${cls}">
+                        <span>${icon}</span><span>${di}</span>
+                        <span style="color:rgba(203,213,225,0.6);">${t._tf}</span>
+                        ${at}
+                        <span style="color:#38bdf8;">${t.entry}</span>
+                        <span style="color:rgba(148,163,184,0.4);">→</span>
+                        <span style="color:${t.status==='TP_HIT'?'#34d399':t.status==='SL_HIT'?'#f87171':'#94a3b8'};">${stxt}</span>
+                        <span style="margin-left:auto;color:rgba(148,163,184,0.35);font-size:0.48rem;">${tm}</span>
+                    </div>`;
                 });
 
                 grid.insertAdjacentHTML('beforeend', `
@@ -512,46 +578,83 @@
                         </div>
 
                         <table class="tf-table">
-                            <thead>
-                                <tr>
-                                    <th>TF</th>
-                                    <th>Signals</th>
-                                    <th>Entries</th>
-                                    <th>TP ✅</th>
-                                    <th>SL ❌</th>
-                                    <th>Win%</th>
-                                    <th>Live</th>
-                                </tr>
-                            </thead>
+                            <thead><tr>
+                                <th>TF</th><th>Signals</th><th>Entries</th><th>TP ✅</th><th>SL ❌</th><th>Win%</th><th>Live</th>
+                            </tr></thead>
                             <tbody>
                                 ${tableRows}
-                                ${tfsToShow.length > 1 ? `
-                                <tr style="border-top:1px solid rgba(255,255,255,0.1);">
+                                ${tfsToShow.length > 1 ? `<tr style="border-top:1px solid rgba(255,255,255,0.1);">
                                     <td style="font-weight:800;color:#fbbf24;">TOTAL</td>
-                                    <td class="td-signals" style="font-weight:800;">${totalSig}</td>
-                                    <td class="td-entries" style="font-weight:800;">${totalEnt}</td>
-                                    <td class="td-tp" style="font-weight:800;">${totalTP}</td>
-                                    <td class="td-sl" style="font-weight:800;">${totalSL}</td>
+                                    <td class="td-signals" style="font-weight:800;">${tSig}</td>
+                                    <td class="td-entries" style="font-weight:800;">${tEnt}</td>
+                                    <td class="td-tp" style="font-weight:800;">${tTP}</td>
+                                    <td class="td-sl" style="font-weight:800;">${tSL}</td>
                                     <td class="td-wr" style="font-weight:800;">${wr.txt}</td>
-                                    <td class="td-active" style="font-weight:800;">${totalPend+totalAct}</td>
+                                    <td class="td-active" style="font-weight:800;">${tPend+tAct}</td>
                                 </tr>` : ''}
                             </tbody>
                         </table>
 
-                        ${recentHTML ? `
-                            <div class="recent-header">Recent Trades</div>
-                            ${recentHTML}
-                        ` : ''}
+                        <div class="align-breakdown">
+                            <div class="ab-title">Performance by Alignment</div>
+                            <div class="ab-grid">
+                                <div class="ab-cell ab-god">
+                                    <div class="ab-cell-title">✅ GOD-MODE (3/3)</div>
+                                    <div class="ab-stat-row">
+                                        <span style="color:rgba(148,163,184,0.5);font-size:0.5rem;">Sig:</span><span style="color:#38bdf8;font-weight:700;">${cGodSig}</span>
+                                        <span style="color:rgba(148,163,184,0.5);font-size:0.5rem;">TP:</span><span style="color:#34d399;font-weight:700;">${cGodTP}</span>
+                                        <span style="color:rgba(148,163,184,0.5);font-size:0.5rem;">SL:</span><span style="color:#f87171;font-weight:700;">${cGodSL}</span>
+                                    </div>
+                                    <div class="ab-stat-row">
+                                        <span style="color:rgba(148,163,184,0.5);font-size:0.5rem;">WR:</span><span style="color:#fbbf24;font-weight:700;">${godWr.txt}</span>
+                                    </div>
+                                </div>
+                                <div class="ab-cell ab-partial">
+                                    <div class="ab-cell-title">⚡ PARTIAL (2/3)</div>
+                                    <div class="ab-stat-row">
+                                        <span style="color:rgba(148,163,184,0.5);font-size:0.5rem;">Sig:</span><span style="color:#38bdf8;font-weight:700;">${cPartSig}</span>
+                                        <span style="color:rgba(148,163,184,0.5);font-size:0.5rem;">TP:</span><span style="color:#34d399;font-weight:700;">${cPartTP}</span>
+                                        <span style="color:rgba(148,163,184,0.5);font-size:0.5rem;">SL:</span><span style="color:#f87171;font-weight:700;">${cPartSL}</span>
+                                    </div>
+                                    <div class="ab-stat-row">
+                                        <span style="color:rgba(148,163,184,0.5);font-size:0.5rem;">WR:</span><span style="color:#fbbf24;font-weight:700;">${partWr.txt}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${recentHTML ? `<div class="recent-header">Recent Trades</div>${recentHTML}` : ''}
                     </div>
                 `);
             });
         }
 
-        // Auto-load on page open
-        loadStats();
+        // ══════════════════════════════════
+        // INITIAL LOAD + SSE LIVE UPDATES
+        // ══════════════════════════════════
+        fetch('/api/stats').then(r=>r.json()).then(data=>{
+            currentStats = data.tradeStats || {};
+            renderStats();
+        });
 
-        // Auto-refresh every 30s
-        setInterval(loadStats, 30000);
+        const sse = new EventSource('/api/stats-stream');
+        const liveEl = document.getElementById('liveStatus');
+
+        sse.onopen = () => {
+            liveEl.innerHTML = '<span class="live-dot"></span>LIVE';
+            liveEl.style.color = '#34d399';
+        };
+        sse.onerror = () => {
+            liveEl.innerHTML = '⚠️ RECONNECTING';
+            liveEl.style.color = '#f87171';
+        };
+        sse.onmessage = e => {
+            const data = JSON.parse(e.data);
+            if (data.tradeStats) {
+                currentStats = data.tradeStats;
+                renderStats();
+            }
+        };
     </script>
 </body>
 </html>
