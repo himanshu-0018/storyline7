@@ -14,82 +14,75 @@ const PORT = process.env.PORT || 3000;
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const TELEGRAM_STORYLINE_CHAT_ID = process.env.TELEGRAM_STORYLINE_CHAT_ID;
 
-const TF_CHANNELS = {
-    "1M": {
-        god:   process.env.TELEGRAM_1M_GOD_CHAT_ID,
-        all:   process.env.TELEGRAM_1M_ALL_CHAT_ID,
-        label: "1 Minute"
-    },
-    "3M": {
-        god:   process.env.TELEGRAM_3M_GOD_CHAT_ID,
-        all:   process.env.TELEGRAM_3M_ALL_CHAT_ID,
-        label: "3 Minutes"
-    },
-    "5M": {
-        god:   process.env.TELEGRAM_5M_GOD_CHAT_ID,
-        all:   process.env.TELEGRAM_5M_ALL_CHAT_ID,
-        label: "5 Minutes"
-    }
-};
+// 6 Entry Channels
+const TG_5M_GOD = process.env.TG_5M_GOD;
+const TG_3M_GOD = process.env.TG_3M_GOD;
+const TG_1M_GOD = process.env.TG_1M_GOD;
+const TG_5M_PARTIAL = process.env.TG_5M_PARTIAL;
+const TG_3M_PARTIAL = process.env.TG_3M_PARTIAL;
+const TG_1M_PARTIAL = process.env.TG_1M_PARTIAL;
 
-const GOD_MODE_THRESHOLD = 3;
-const ALIGNED_THRESHOLD  = 2;
-const REDIS_STATE_KEY    = process.env.REDIS_KEY || 'godModeState';
-const REDIS_LOG_KEY      = REDIS_STATE_KEY + '_activityLog';
-const REDIS_TRADES_KEY   = REDIS_STATE_KEY + '_trades';
+const ALIGNMENT_THRESHOLD = 3; // 1H + 30M + 15M
+const REDIS_STATE_KEY = process.env.REDIS_KEY || 'godModeState_v3';
+const REDIS_LOG_KEY = REDIS_STATE_KEY + '_activityLog';
+const REDIS_STATS_KEY = REDIS_STATE_KEY + '_tradeStats';
 
-const ZONE_TIMEFRAMES  = ["1H", "30M", "15M"];
-const ENTRY_TIMEFRAMES = ["1M", "3M", "5M"];
+const ZONE_TIMEFRAMES = ["1H", "30M", "15M"];
+const ENTRY_TIMEFRAMES = ["5M", "3M", "1M"];
 
-let marketState  = {};
-let activityLog  = [];
-let tradeTracker = {};
-let clients      = [];
+let marketState = {};
+let activityLog = [];
+let tradeStats = {};
+let clients = [];
 
 // ══════════════════════════════════════════════
-// BROADCAST TO ALL SSE CLIENTS
+// BROADCAST
 // ══════════════════════════════════════════════
-function broadcastAll() {
-    const data = JSON.stringify({ marketState, activityLog, tradeTracker });
+function broadcastAll(extras = {}) {
+    const data = JSON.stringify({ marketState, activityLog, ...extras });
+    clients.forEach(client => client.res.write(`data: ${data}\n\n`));
+}
+
+function broadcastSoundAlert(symbol, direction, channel) {
+    const data = JSON.stringify({ soundAlert: true, symbol, direction, channel });
     clients.forEach(client => client.res.write(`data: ${data}\n\n`));
 }
 
 // ══════════════════════════════════════════════
-// TELEGRAM CORE SENDER
+// TELEGRAM
 // ══════════════════════════════════════════════
-async function sendTelegram(chatId, message, context = '') {
-    if (!TELEGRAM_TOKEN || !chatId) return;
+async function sendTelegram(chatId, message) {
+    if (!TELEGRAM_TOKEN || !chatId) return false;
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
     try {
         const resp = await fetch(url, {
-            method:  'POST',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
-                chat_id:    chatId,
-                text:       message,
-                parse_mode: "HTML"
-            })
+            body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" })
         });
-        if (!resp.ok) {
-            const err = await resp.text();
-            console.error(`Telegram Error [${context}]:`, err);
-        }
+        return resp.ok;
     } catch (err) {
-        console.error(`Telegram Network Error [${context}]:`, err.message);
+        console.error("Telegram Error:", err);
+        return false;
     }
 }
 
-// Convenience wrappers
-async function sendStorylineAlert(msg) {
-    await sendTelegram(TELEGRAM_STORYLINE_CHAT_ID, msg, 'storyline');
+async function sendStorylineAlert(message) {
+    return sendTelegram(TELEGRAM_STORYLINE_CHAT_ID, message);
 }
 
-async function sendGodModeEntry(tf, msg) {
-    await sendTelegram(TF_CHANNELS[tf]?.god, msg, `${tf}-god`);
+function getGodChannel(entryTf) {
+    if (entryTf === "5M") return TG_5M_GOD;
+    if (entryTf === "3M") return TG_3M_GOD;
+    if (entryTf === "1M") return TG_1M_GOD;
+    return null;
 }
 
-async function sendAlignedEntry(tf, msg) {
-    await sendTelegram(TF_CHANNELS[tf]?.all, msg, `${tf}-all`);
+function getPartialChannel(entryTf) {
+    if (entryTf === "5M") return TG_5M_PARTIAL;
+    if (entryTf === "3M") return TG_3M_PARTIAL;
+    if (entryTf === "1M") return TG_1M_PARTIAL;
+    return null;
 }
 
 // ══════════════════════════════════════════════
@@ -97,226 +90,206 @@ async function sendAlignedEntry(tf, msg) {
 // ══════════════════════════════════════════════
 async function pushLogEvent(symbol, type, message, timestamp = null) {
     const ts = timestamp || Date.now();
-
     const isDup = activityLog.some(e =>
-        e.symbol === symbol &&
-        e.type   === type   &&
-        Math.abs((e.timestamp || 0) - ts) < 5000
+        e.symbol === symbol && e.type === type && Math.abs((e.timestamp || 0) - ts) < 5000
     );
     if (isDup) return;
-
     activityLog.unshift({ symbol, type, message, timestamp: ts });
     if (activityLog.length > 100) activityLog = activityLog.slice(0, 100);
     await redisClient.set(REDIS_LOG_KEY, JSON.stringify(activityLog));
 }
 
 // ══════════════════════════════════════════════
-// TRADE TRACKER HELPERS
+// TRADE STATISTICS ENGINE
 // ══════════════════════════════════════════════
-function getTracker(tf, symbol) {
-    if (!tradeTracker[tf]) tradeTracker[tf] = {};
-    if (!tradeTracker[tf][symbol]) {
-        tradeTracker[tf][symbol] = {
-            signals:  0,
-            entered:  0,
-            tp:       0,
-            sl:       0,
-            pending:  0,
-            active:   0,
-            trades:   []
+async function recordTradeEvent(symbol, entryTf, direction, action, entry, sl, tp, rr, touchedLevel, channel) {
+    if (!tradeStats[symbol]) {
+        tradeStats[symbol] = {};
+    }
+    if (!tradeStats[symbol][entryTf]) {
+        tradeStats[symbol][entryTf] = {
+            total_signals: 0,
+            total_entries: 0,
+            tp_hits: 0,
+            sl_hits: 0,
+            pending: 0,
+            active: 0,
+            trades: []
         };
     }
-    return tradeTracker[tf][symbol];
-}
 
-async function saveTracker() {
-    await redisClient.set(REDIS_TRADES_KEY, JSON.stringify(tradeTracker));
-}
+    const stats = tradeStats[symbol][entryTf];
 
-function recalcTrackerCounts(tracker) {
-    let pending = 0, active = 0, entered = 0, tp = 0, sl = 0;
-
-    tracker.trades.forEach(t => {
-        if (t.status === 'PENDING')  pending++;
-        else if (t.status === 'ACTIVE')  { active++; entered++; }
-        else if (t.status === 'TP_HIT')  { tp++;     entered++; }
-        else if (t.status === 'SL_HIT')  { sl++;     entered++; }
-    });
-
-    tracker.pending  = pending;
-    tracker.active   = active;
-    tracker.entered  = entered;
-    tracker.tp       = tp;
-    tracker.sl       = sl;
-    tracker.signals  = tracker.trades.length;
-}
-
-// ══════════════════════════════════════════════
-// MASTER ZONE CALCULATOR
-// ══════════════════════════════════════════════
-function recalculateMasterZones(symbol) {
-    const sym = marketState[symbol];
-
-    if (!sym.stopLosses)                        sym.stopLosses           = { "1H": null, "30M": null, "15M": null };
-    if (!sym.breakouts)                         sym.breakouts            = { "1H": null, "30M": null, "15M": null };
-    if (sym.activeSL === undefined)             sym.activeSL             = "N/A";
-    if (sym.activeBO === undefined)             sym.activeBO             = "N/A";
-    if (sym.lastGodModeStartTime === undefined) sym.lastGodModeStartTime = null;
-    if (sym.alignmentCount === undefined)       sym.alignmentCount       = 0;
-
-    let bullCount = 0;
-    let bearCount = 0;
-    const currentTfs = sym.timeframes || {};
-
-    ZONE_TIMEFRAMES.forEach(tf => {
-        if (currentTfs[tf] === "BULLISH") bullCount++;
-        if (currentTfs[tf] === "BEARISH") bearCount++;
-    });
-
-    let dominantState  = "NONE";
-    let alignmentLevel = 0;
-
-    if (bullCount >= ALIGNED_THRESHOLD) {
-        dominantState  = "BULLISH";
-        alignmentLevel = bullCount;
-    }
-    if (bearCount >= ALIGNED_THRESHOLD) {
-        dominantState  = "BEARISH";
-        alignmentLevel = bearCount;
-    }
-
-    sym.alignmentCount = alignmentLevel;
-
-    // Zone calculated for display (not gating)
-    let masterBO = "N/A";
-    let masterSL = "N/A";
-
-    if (dominantState !== "NONE") {
-        const validBOs = [];
-        const validSLs = [];
-
-        ZONE_TIMEFRAMES.forEach(tf => {
-            if (currentTfs[tf] === dominantState) {
-                const tfBo = sym.breakouts[tf];
-                const tfSl = sym.stopLosses[tf];
-                if (tfBo != null && tfBo !== "N/A" && tfSl != null && tfSl !== "N/A") {
-                    validBOs.push(parseFloat(tfBo));
-                    validSLs.push(parseFloat(tfSl));
-                }
-            }
+    if (action === "SIGNAL") {
+        stats.total_signals++;
+        stats.pending++;
+        stats.trades.push({
+            id: `${symbol}_${entryTf}_${Date.now()}`,
+            direction,
+            entry: parseFloat(entry),
+            sl: parseFloat(sl),
+            tp: parseFloat(tp),
+            rr: parseFloat(rr),
+            touched_level: touchedLevel,
+            channel: channel || 'NONE',
+            status: 'SIGNAL',
+            signal_time: Date.now(),
+            entry_time: null,
+            result_time: null
         });
-
-        if (validBOs.length > 0 && validSLs.length > 0) {
-            masterBO = dominantState === "BULLISH" ? Math.max(...validBOs) : Math.min(...validBOs);
-            masterSL = dominantState === "BULLISH" ? Math.max(...validSLs) : Math.min(...validSLs);
+    } else if (action === "ENTRY_FILLED") {
+        stats.total_entries++;
+        if (stats.pending > 0) stats.pending--;
+        stats.active++;
+        // Update last matching trade
+        for (let i = stats.trades.length - 1; i >= 0; i--) {
+            if (stats.trades[i].status === 'SIGNAL' &&
+                stats.trades[i].direction === direction &&
+                Math.abs(stats.trades[i].entry - parseFloat(entry)) < 0.0001) {
+                stats.trades[i].status = 'ACTIVE';
+                stats.trades[i].entry_time = Date.now();
+                break;
+            }
+        }
+    } else if (action === "TP_HIT") {
+        stats.tp_hits++;
+        if (stats.active > 0) stats.active--;
+        for (let i = stats.trades.length - 1; i >= 0; i--) {
+            if ((stats.trades[i].status === 'ACTIVE' || stats.trades[i].status === 'SIGNAL') &&
+                stats.trades[i].direction === direction &&
+                Math.abs(stats.trades[i].entry - parseFloat(entry)) < 0.0001) {
+                stats.trades[i].status = 'TP_HIT';
+                stats.trades[i].result_time = Date.now();
+                break;
+            }
+        }
+    } else if (action === "SL_HIT") {
+        stats.sl_hits++;
+        if (stats.active > 0) stats.active--;
+        for (let i = stats.trades.length - 1; i >= 0; i--) {
+            if ((stats.trades[i].status === 'ACTIVE' || stats.trades[i].status === 'SIGNAL') &&
+                stats.trades[i].direction === direction &&
+                Math.abs(stats.trades[i].entry - parseFloat(entry)) < 0.0001) {
+                stats.trades[i].status = 'SL_HIT';
+                stats.trades[i].result_time = Date.now();
+                break;
+            }
         }
     }
 
-    sym.activeBO = masterBO;
-    sym.activeSL = masterSL;
+    // Keep only last 200 trades per symbol/tf
+    if (stats.trades.length > 200) {
+        stats.trades = stats.trades.slice(-200);
+    }
 
-    return { dominantState, bullCount, bearCount, alignmentLevel, masterBO, masterSL };
+    await redisClient.set(REDIS_STATS_KEY, JSON.stringify(tradeStats));
 }
 
 // ══════════════════════════════════════════════
-// ENTRY VALIDATORS — ALIGNMENT ONLY, NO ZONE
+// ALIGNMENT CALCULATOR
 // ══════════════════════════════════════════════
-function validateGodModeEntry(symbol, signalDirection) {
+function recalculateAlignment(symbol) {
+    if (!marketState[symbol]) return { dominantState: "NONE", alignCount: 0 };
+
+    const tfs = marketState[symbol].timeframes || {};
+    let bullCount = 0;
+    let bearCount = 0;
+
+    ZONE_TIMEFRAMES.forEach(tf => {
+        if (tfs[tf] === "BULLISH") bullCount++;
+        if (tfs[tf] === "BEARISH") bearCount++;
+    });
+
+    let dominantState = "NONE";
+    let alignCount = 0;
+    if (bullCount >= ALIGNMENT_THRESHOLD) { dominantState = "BULLISH"; alignCount = bullCount; }
+    if (bearCount >= ALIGNMENT_THRESHOLD) { dominantState = "BEARISH"; alignCount = bearCount; }
+
+    // Partial alignment (2/3)
+    let partialState = "NONE";
+    let partialCount = 0;
+    if (bullCount >= 2 && dominantState === "NONE") { partialState = "BULLISH"; partialCount = bullCount; }
+    if (bearCount >= 2 && dominantState === "NONE") { partialState = "BEARISH"; partialCount = bearCount; }
+
+    marketState[symbol].alignCount = Math.max(bullCount, bearCount);
+    marketState[symbol].partialState = partialState;
+    marketState[symbol].partialCount = partialCount;
+
+    return { dominantState, alignCount, bullCount, bearCount, partialState, partialCount };
+}
+
+// ══════════════════════════════════════════════
+// ENTRY VALIDATORS
+// ══════════════════════════════════════════════
+function validateGodMode(symbol, signalDirection) {
+    if (!marketState[symbol]) return { valid: false, reason: "Symbol not tracked" };
+    const godState = marketState[symbol].lastAlertedState;
+    if (godState === "NONE") return { valid: false, reason: "No God-Mode alignment (need 3/3)" };
+    if (signalDirection !== godState) return { valid: false, reason: `Direction mismatch: Signal=${signalDirection}, God=${godState}` };
+    return { valid: true, reason: "God-Mode confirmed (3/3)", godState };
+}
+
+function validatePartial(symbol, signalDirection) {
     if (!marketState[symbol]) return { valid: false, reason: "Symbol not tracked" };
 
-    const data           = marketState[symbol];
-    const godState       = data.lastAlertedState;
-    const alignmentCount = data.alignmentCount || 0;
+    const tfs = marketState[symbol].timeframes || {};
+    let bullCount = 0, bearCount = 0;
+    ZONE_TIMEFRAMES.forEach(tf => {
+        if (tfs[tf] === "BULLISH") bullCount++;
+        if (tfs[tf] === "BEARISH") bearCount++;
+    });
 
-    if (godState === "NONE" || alignmentCount < GOD_MODE_THRESHOLD)
-        return { valid: false, reason: `Not God-Mode (${alignmentCount}/3)` };
-
-    if (signalDirection !== godState)
-        return { valid: false, reason: `Direction mismatch: Signal=${signalDirection}, God=${godState}` };
-
-    return {
-        valid:          true,
-        reason:         "3/3 alignment confirmed",
-        godState,
-        alignmentCount
-    };
-}
-
-function validateAlignedEntry(symbol, signalDirection) {
-    if (!marketState[symbol]) return { valid: false, reason: "Symbol not tracked" };
-
-    const data           = marketState[symbol];
-    const godState       = data.lastAlertedState;
-    const alignmentCount = data.alignmentCount || 0;
-
-    if (godState === "NONE" || alignmentCount < ALIGNED_THRESHOLD)
-        return { valid: false, reason: `Not aligned (${alignmentCount}/3)` };
-
-    if (signalDirection !== godState)
-        return { valid: false, reason: `Direction mismatch` };
-
-    return {
-        valid:          true,
-        reason:         `${alignmentCount}/3 alignment confirmed`,
-        godState,
-        alignmentCount
-    };
+    const matchCount = signalDirection === "BULLISH" ? bullCount : bearCount;
+    if (matchCount < 2) return { valid: false, reason: `Only ${matchCount}/3 aligned` };
+    return { valid: true, reason: `Partial alignment (${matchCount}/3)`, alignCount: matchCount };
 }
 
 // ══════════════════════════════════════════════
-// HELPERS
+// NORMALIZE TF STRING
 // ══════════════════════════════════════════════
-function getAlignedTFs(symbol, direction) {
-    if (!marketState[symbol]?.timeframes) return "N/A";
-    return ZONE_TIMEFRAMES.filter(t => marketState[symbol].timeframes[t] === direction).join(' + ') || "None";
-}
-
-function getZoneDisplay(symbol) {
-    if (!marketState[symbol]) return { bo: "N/A", sl: "N/A" };
-    return {
-        bo: marketState[symbol].activeBO || "N/A",
-        sl: marketState[symbol].activeSL || "N/A"
+function normalizeTf(tf) {
+    if (!tf) return null;
+    const upper = tf.toUpperCase().trim();
+    const map = {
+        "1": "1M", "1M": "1M", "1MIN": "1M",
+        "3": "3M", "3M": "3M", "3MIN": "3M",
+        "5": "5M", "5M": "5M", "5MIN": "5M",
+        "15": "15M", "15M": "15M", "15MIN": "15M",
+        "30": "30M", "30M": "30M", "30MIN": "30M",
+        "60": "1H", "1H": "1H", "1HR": "1H",
+        "240": "4H", "4H": "4H",
+        "1D": "1D", "D": "1D"
     };
+    return map[upper] || upper;
 }
 
 // ══════════════════════════════════════════════
 // REDIS BOOT
 // ══════════════════════════════════════════════
 const redisClient = createClient({ url: process.env.REDIS_URL });
-redisClient.on('error', err => console.error('Redis Client Error:', err));
+redisClient.on('error', (err) => console.error('Redis Client Error:', err));
 await redisClient.connect();
 console.log('✅ Connected to Redis');
 
-// Restore market state
 const savedData = await redisClient.get(REDIS_STATE_KEY);
 if (savedData) {
     marketState = JSON.parse(savedData);
-    console.log(`💾 Restored state from: ${REDIS_STATE_KEY}`);
+    console.log(`💾 Restored state from: ${REDIS_STATE_KEY} (${Object.keys(marketState).length} symbols)`);
 
+    // Re-sync all symbols
     for (const symbol in marketState) {
-        // Clean obsolete timeframes
-        ["1D", "4H", "1W", "1M"].forEach(tf => {
-            if (marketState[symbol].timeframes) delete marketState[symbol].timeframes[tf];
-            if (marketState[symbol].breakouts)  delete marketState[symbol].breakouts[tf];
-            if (marketState[symbol].stopLosses) delete marketState[symbol].stopLosses[tf];
+        // Clean old TFs
+        const obsolete = ["1D", "4H", "1W", "1M"];
+        obsolete.forEach(oldTf => {
+            if (marketState[symbol].timeframes) delete marketState[symbol].timeframes[oldTf];
+            if (marketState[symbol].breakouts) delete marketState[symbol].breakouts[oldTf];
+            if (marketState[symbol].stopLosses) delete marketState[symbol].stopLosses[oldTf];
         });
 
-        // Ensure new timeframes exist
-        if (!marketState[symbol].timeframes) marketState[symbol].timeframes = {};
-        if (!marketState[symbol].breakouts)  marketState[symbol].breakouts  = {};
-        if (!marketState[symbol].stopLosses) marketState[symbol].stopLosses = {};
-
-        ZONE_TIMEFRAMES.forEach(tf => {
-            if (!marketState[symbol].timeframes[tf])              marketState[symbol].timeframes[tf] = "NONE";
-            if (marketState[symbol].breakouts[tf]  === undefined) marketState[symbol].breakouts[tf]  = null;
-            if (marketState[symbol].stopLosses[tf] === undefined) marketState[symbol].stopLosses[tf] = null;
-        });
-
-        const { dominantState, alignmentLevel } = recalculateMasterZones(symbol);
-
+        const { dominantState } = recalculateAlignment(symbol);
         if (dominantState !== "NONE") {
             if (marketState[symbol].lastAlertedState !== dominantState) {
-                console.log(`🔄 [BOOT] ${symbol}: "${marketState[symbol].lastAlertedState}" → "${dominantState}" (${alignmentLevel}/3)`);
+                console.log(`🔄 [BOOT FIX] ${symbol}: "${marketState[symbol].lastAlertedState}" → "${dominantState}"`);
                 marketState[symbol].lastAlertedState = dominantState;
                 if (!marketState[symbol].lastGodModeStartTime) {
                     marketState[symbol].lastGodModeStartTime = Date.now();
@@ -324,46 +297,39 @@ if (savedData) {
             }
         } else {
             if (marketState[symbol].lastAlertedState !== "NONE") {
-                console.log(`🔄 [BOOT] ${symbol}: "${marketState[symbol].lastAlertedState}" → "NONE"`);
+                console.log(`🔄 [BOOT FIX] ${symbol}: "${marketState[symbol].lastAlertedState}" → "NONE"`);
                 marketState[symbol].lastAlertedState = "NONE";
             }
-            marketState[symbol].activeBO = "N/A";
-            marketState[symbol].activeSL = "N/A";
         }
     }
-
     await redisClient.set(REDIS_STATE_KEY, JSON.stringify(marketState));
-    console.log(`🔄 Re-synced ${Object.keys(marketState).length} symbols`);
 } else {
-    console.log(`🆕 No saved state found for: ${REDIS_STATE_KEY}`);
+    console.log(`🆕 No data found for: ${REDIS_STATE_KEY}`);
 }
 
-// Restore activity log
 const savedLog = await redisClient.get(REDIS_LOG_KEY);
 if (savedLog) {
     activityLog = JSON.parse(savedLog);
     console.log(`📋 Restored ${activityLog.length} log entries`);
-} else {
-    console.log(`📋 No activity log found`);
 }
 
-// Restore trade tracker
-const savedTrades = await redisClient.get(REDIS_TRADES_KEY);
-if (savedTrades) {
-    tradeTracker = JSON.parse(savedTrades);
-    console.log(`📊 Restored trade tracker data`);
+const savedStats = await redisClient.get(REDIS_STATS_KEY);
+if (savedStats) {
+    tradeStats = JSON.parse(savedStats);
+    console.log(`📊 Restored trade stats for ${Object.keys(tradeStats).length} symbols`);
 } else {
-    console.log(`📊 No trade data found`);
+    console.log(`📊 No trade stats found`);
 }
-
-// Clean legacy key
-await redisClient.del((process.env.REDIS_KEY || 'godModeState') + '_lastEntry');
 
 // ══════════════════════════════════════════════
 // API ENDPOINTS
 // ══════════════════════════════════════════════
 app.get('/api/state', (req, res) => {
-    res.json({ marketState, activityLog, tradeTracker });
+    res.json({ marketState, activityLog });
+});
+
+app.get('/api/stats', (req, res) => {
+    res.json({ tradeStats });
 });
 
 app.get('/api/stream', (req, res) => {
@@ -383,208 +349,135 @@ app.get('/api/stream', (req, res) => {
     });
 });
 
-// ── DELETE ENDPOINT ──
+// ══════════════════════════════════════════════
+// DELETE ENDPOINT
+// ══════════════════════════════════════════════
 app.post('/api/delete', async (req, res) => {
     const { symbol, action } = req.body;
     if (!symbol || action !== 'DELETE') return res.status(400).send("Invalid Delete Payload");
 
     const sym = symbol.toUpperCase().trim();
-    console.log(`\n[PURGE] Received purge request for: ${sym}`);
+    console.log(`\n[PURGE] ${sym}`);
 
     if (marketState[sym]) {
         delete marketState[sym];
-
-        // Also clean trade tracker for this symbol across all TFs
-        ENTRY_TIMEFRAMES.forEach(tf => {
-            if (tradeTracker[tf] && tradeTracker[tf][sym]) {
-                delete tradeTracker[tf][sym];
-            }
-        });
-
         await redisClient.set(REDIS_STATE_KEY, JSON.stringify(marketState));
-        await saveTracker();
-        console.log(`✅ [PURGE] ${sym} successfully deleted.`);
-        await pushLogEvent(sym, 'NONE', `🗑️ Manually Purged from Database`, Date.now());
+        await pushLogEvent(sym, 'NONE', `🗑️ Manually Purged`, Date.now());
         broadcastAll();
-        return res.status(200).send("Purged successfully");
-    } else {
-        console.log(`❌ [PURGE] ${sym} not found.`);
-        return res.status(404).send("Symbol not found");
+        return res.status(200).send("Purged");
     }
-});
-
-// ── RESET TRADES ENDPOINT ──
-app.post('/api/reset-trades', async (req, res) => {
-    const { tf, symbol } = req.body;
-
-    if (tf && symbol) {
-        const sym = symbol.toUpperCase().trim();
-        if (tradeTracker[tf] && tradeTracker[tf][sym]) {
-            tradeTracker[tf][sym] = { signals: 0, entered: 0, tp: 0, sl: 0, pending: 0, active: 0, trades: [] };
-            console.log(`🔄 Reset trades for ${sym} on ${tf}`);
-        }
-    } else if (tf) {
-        tradeTracker[tf] = {};
-        console.log(`🔄 Reset all trades for ${tf}`);
-    } else {
-        tradeTracker = {};
-        console.log(`🔄 Reset ALL trade data`);
-    }
-
-    await saveTracker();
-    broadcastAll();
-    return res.status(200).send("OK");
-});
-
-// ── CHANNEL CONFIG ENDPOINT ──
-app.get('/api/channels', (req, res) => {
-    const config = {};
-    ENTRY_TIMEFRAMES.forEach(tf => {
-        config[tf] = {
-            godConfigured: !!TF_CHANNELS[tf]?.god,
-            allConfigured: !!TF_CHANNELS[tf]?.all,
-            label:         TF_CHANNELS[tf]?.label || tf
-        };
-    });
-    res.json({
-        channels:            config,
-        storylineConfigured: !!TELEGRAM_STORYLINE_CHAT_ID
-    });
+    return res.status(404).send("Symbol not found");
 });
 
 // ══════════════════════════════════════════════
-// UNIFIED WEBHOOK
+// DELETE STATS ENDPOINT
+// ══════════════════════════════════════════════
+app.post('/api/delete-stats', async (req, res) => {
+    const { symbol } = req.body;
+    if (!symbol) return res.status(400).send("Invalid payload");
+
+    const sym = symbol.toUpperCase().trim();
+
+    if (sym === "ALL") {
+        tradeStats = {};
+        await redisClient.set(REDIS_STATS_KEY, JSON.stringify(tradeStats));
+        console.log(`[STATS PURGE] All stats cleared`);
+        return res.status(200).send("All stats cleared");
+    }
+
+    if (tradeStats[sym]) {
+        delete tradeStats[sym];
+        await redisClient.set(REDIS_STATS_KEY, JSON.stringify(tradeStats));
+        console.log(`[STATS PURGE] ${sym} stats cleared`);
+        return res.status(200).send("Stats cleared");
+    }
+    return res.status(404).send("No stats for symbol");
+});
+
+// ══════════════════════════════════════════════
+// UNIFIED WEBHOOK RECEIVER
 // ══════════════════════════════════════════════
 app.post('/webhook', async (req, res) => {
     const payload = req.body;
 
     const isStoryline = payload.state !== undefined && payload.tf !== undefined && !payload.type;
-    const isEntry     = payload.type  !== undefined;
+    const isEntry = payload.type !== undefined;
 
     // ─────────────────────────────────────────
-    // STORYLINE WEBHOOK (1H / 30M / 15M)
+    // STORYLINE WEBHOOK (1H, 30M, 15M)
     // ─────────────────────────────────────────
     if (isStoryline) {
-        const { symbol, tf, state, bo, sl } = payload;
+        const { symbol, state } = payload;
+        const tf = normalizeTf(payload.tf);
+        const bo = payload.bo;
+        const sl = payload.sl;
+
         if (!symbol || !tf || !state) return res.status(400).send("Invalid Storyline Payload");
 
-        // Only accept storyline TFs
+        // Only accept 1H, 30M, 15M
         if (!ZONE_TIMEFRAMES.includes(tf)) {
-            console.log(`[STORYLINE] ${symbol} | ${tf} ignored — only 1H/30M/15M tracked`);
+            console.log(`[STORYLINE] ${symbol} | ${tf} ignored — not tracked`);
             return res.status(200).send("OK");
         }
 
-        console.log(`\n[STORYLINE] ${symbol} | ${tf} → ${state} | BO: ${bo || 'N/A'} | SL: ${sl || 'N/A'}`);
+        console.log(`\n[STORYLINE] ${symbol} | ${tf} -> ${state} | BO: ${bo || 'N/A'} | SL: ${sl || 'N/A'}`);
 
-        // Initialize symbol if new
         if (!marketState[symbol]) {
             marketState[symbol] = {
-                timeframes:           { "1H": "NONE", "30M": "NONE", "15M": "NONE" },
-                breakouts:            { "1H": null,   "30M": null,   "15M": null   },
-                stopLosses:           { "1H": null,   "30M": null,   "15M": null   },
-                lastAlertedState:     "NONE",
-                activeBO:             "N/A",
-                activeSL:             "N/A",
-                alignmentCount:       0,
-                lastGodModeStartTime: null
+                timeframes: { "1H": "NONE", "30M": "NONE", "15M": "NONE" },
+                breakouts: { "1H": null, "30M": null, "15M": null },
+                stopLosses: { "1H": null, "30M": null, "15M": null },
+                lastAlertedState: "NONE",
+                lastGodModeStartTime: null,
+                alignCount: 0,
+                partialState: "NONE",
+                partialCount: 0
             };
         }
 
-        // Remove obsolete TFs
-        ["1D", "4H", "1W", "1M"].forEach(oldTf => {
-            if (marketState[symbol].timeframes) delete marketState[symbol].timeframes[oldTf];
-            if (marketState[symbol].breakouts)  delete marketState[symbol].breakouts[oldTf];
-            if (marketState[symbol].stopLosses) delete marketState[symbol].stopLosses[oldTf];
-        });
+        // Ensure structure
+        if (!marketState[symbol].timeframes) marketState[symbol].timeframes = { "1H": "NONE", "30M": "NONE", "15M": "NONE" };
+        if (!marketState[symbol].breakouts) marketState[symbol].breakouts = { "1H": null, "30M": null, "15M": null };
+        if (!marketState[symbol].stopLosses) marketState[symbol].stopLosses = { "1H": null, "30M": null, "15M": null };
 
-        // Update the timeframe
         marketState[symbol].timeframes[tf] = state;
-        if (bo !== undefined) marketState[symbol].breakouts[tf]  = bo;
+        if (bo !== undefined) marketState[symbol].breakouts[tf] = bo;
         if (sl !== undefined) marketState[symbol].stopLosses[tf] = sl;
 
-        // Recalculate alignment
-        const prevAlertedState   = marketState[symbol].lastAlertedState;
-        const prevAlignmentCount = marketState[symbol].alignmentCount || 0;
-        const { dominantState, bullCount, bearCount, alignmentLevel, masterBO, masterSL } = recalculateMasterZones(symbol);
+        const prevAlertedState = marketState[symbol].lastAlertedState;
+        const { dominantState, alignCount, bullCount, bearCount, partialState, partialCount } = recalculateAlignment(symbol);
 
-        console.log(`[ZONE] ${symbol} → ${dominantState} | 🐂 ${bullCount}/3 | 🐻 ${bearCount}/3 | Align: ${alignmentLevel}/3 | BO: ${masterBO} | SL: ${masterSL}`);
+        console.log(`[ALIGNMENT] ${symbol} -> Dominant: ${dominantState} | Bulls: ${bullCount}/3 | Bears: ${bearCount}/3 | Partial: ${partialState}(${partialCount}/3)`);
 
-        const getAlignLabel = (n) => n >= 3 ? "GOD MODE" : n >= 2 ? "ALIGNED" : "NONE";
-
-        const buildAlignedTFs = (dir) => ZONE_TIMEFRAMES
-            .filter(t => marketState[symbol].timeframes[t] === dir).join(' + ');
-
-        // ── Alignment ON or UPGRADED ──
-        if (dominantState !== "NONE" &&
-            (dominantState !== prevAlertedState || alignmentLevel !== prevAlignmentCount)) {
-
+        // God-Mode ON (3/3)
+        if (dominantState !== "NONE" && dominantState !== prevAlertedState) {
             const now = Date.now();
-
-            if (prevAlertedState === "NONE" || dominantState !== prevAlertedState) {
-                marketState[symbol].lastGodModeStartTime = now;
-            }
-
+            marketState[symbol].lastGodModeStartTime = now;
             marketState[symbol].lastAlertedState = dominantState;
-            const alignedTFs = buildAlignedTFs(dominantState);
 
-            if (alignmentLevel >= GOD_MODE_THRESHOLD) {
-                // 3/3 = GOD MODE
-                const emoji = dominantState === "BULLISH" ? "🚀 🐂" : "🩸 🐻";
-                let msg  = `<b>${emoji} GOD-MODE: ${symbol}</b>\n\n`;
-                msg += `<b>Trend:</b> ${dominantState} (${alignmentLevel}/3)\n`;
-                msg += `<b>🎯 Zone:</b> <code>${masterBO}</code> → <code>${masterSL}</code>\n`;
-                msg += `<b>Aligned:</b> ${alignedTFs} ✅\n`;
-                msg += `<b>Status:</b> ⚡ GOD MODE ACTIVE`;
-                await sendStorylineAlert(msg);
-                await pushLogEvent(symbol, dominantState,
-                    `⚡ GOD MODE: ${dominantState} | ${alignedTFs} | Zone: ${masterBO} → ${masterSL}`, now);
-                console.log(`[GOD ON] ${symbol} → ${dominantState} 3/3`);
-
-            } else {
-                // 2/3 = ALIGNED
-                const emoji = dominantState === "BULLISH" ? "📈 🐂" : "📉 🐻";
-                let msg  = `<b>${emoji} ALIGNED: ${symbol}</b>\n\n`;
-                msg += `<b>Trend:</b> ${dominantState} (${alignmentLevel}/3)\n`;
-                msg += `<b>🎯 Zone:</b> <code>${masterBO}</code> → <code>${masterSL}</code>\n`;
-                msg += `<b>Aligned:</b> ${alignedTFs} ✅\n`;
-                msg += `<b>Status:</b> 🔶 ALIGNED (need 1 more for God Mode)`;
-                await sendStorylineAlert(msg);
-                await pushLogEvent(symbol, dominantState,
-                    `🔶 Aligned: ${dominantState} | ${alignedTFs} | Zone: ${masterBO} → ${masterSL}`, now);
-                console.log(`[ALIGNED] ${symbol} → ${dominantState} ${alignmentLevel}/3`);
-            }
-
-        // ── DOWNGRADE (3→2) ──
-        } else if (dominantState !== "NONE" && dominantState === prevAlertedState &&
-                   alignmentLevel < prevAlignmentCount && alignmentLevel >= ALIGNED_THRESHOLD) {
-
-            const alignedTFs = buildAlignedTFs(dominantState);
-            let msg = `<b>⚠️ DOWNGRADED: ${symbol}</b>\n\n`;
-            msg += `<b>Was:</b> ${getAlignLabel(prevAlignmentCount)} (${prevAlignmentCount}/3)\n`;
-            msg += `<b>Now:</b> ${getAlignLabel(alignmentLevel)} (${alignmentLevel}/3)\n`;
-            msg += `<b>Still aligned:</b> ${alignedTFs}\n`;
-            msg += `<b>Zone:</b> <code>${masterBO}</code> → <code>${masterSL}</code>`;
+            const emoji = dominantState === "BULLISH" ? "🚀 🐂" : "🩸 🐻";
+            let msg = `<b>${emoji} GOD-MODE: ${symbol}</b>\n\n`;
+            msg += `<b>Alignment:</b> ${dominantState} (3/3)\n`;
+            msg += `<b>1H:</b> ${marketState[symbol].timeframes["1H"]}\n`;
+            msg += `<b>30M:</b> ${marketState[symbol].timeframes["30M"]}\n`;
+            msg += `<b>15M:</b> ${marketState[symbol].timeframes["15M"]}\n`;
+            msg += `\n<b>Confluence:</b> 1H + 30M + 15M aligned ✅`;
             await sendStorylineAlert(msg);
-            await pushLogEvent(symbol, dominantState,
-                `⚠️ Downgraded: ${getAlignLabel(prevAlignmentCount)} → ${getAlignLabel(alignmentLevel)} (${alignmentLevel}/3)`,
-                Date.now());
-            console.log(`[DOWNGRADE] ${symbol} ${prevAlignmentCount}/3 → ${alignmentLevel}/3`);
 
-        // ── Alignment LOST ──
+            await pushLogEvent(symbol, dominantState, `GOD-MODE: ${dominantState} (3/3) aligned`, now);
+            console.log(`[GOD-MODE ON] ${symbol} → ${dominantState} | 3-way confluence`);
+
+        // God-Mode OFF
         } else if (dominantState === "NONE" && prevAlertedState !== "NONE") {
-            const prevDir = prevAlertedState;
-            marketState[symbol].lastAlertedState  = "NONE";
-            marketState[symbol].activeBO          = "N/A";
-            marketState[symbol].activeSL          = "N/A";
-            marketState[symbol].alignmentCount    = 0;
+            marketState[symbol].lastAlertedState = "NONE";
 
-            let msg = `<b>⚠️ TREND LOST: ${symbol}</b>\n\n`;
-            msg += `<b>Was:</b> ${prevDir} (${getAlignLabel(prevAlignmentCount)})\n`;
-            msg += `Alignment dropped below 2/3.`;
+            let msg = `<b>⚠️ ALIGNMENT LOST: ${symbol}</b>\n\n`;
+            msg += `Previously: ${prevAlertedState} (3/3)\n`;
+            msg += `Now: ${partialState !== "NONE" ? partialState + ` (${partialCount}/3)` : 'No alignment'}\n`;
             await sendStorylineAlert(msg);
-            await pushLogEvent(symbol, 'NONE',
-                `Trend Lost: ${prevDir} | ${prevAlignmentCount}/3 → 0/3`, Date.now());
-            console.log(`[TREND LOST] ${symbol} → NONE`);
+
+            await pushLogEvent(symbol, 'NONE', `Alignment Lost: ${prevAlertedState} broken`, Date.now());
+            console.log(`[GOD-MODE OFF] ${symbol} → NONE`);
         }
 
         await redisClient.set(REDIS_STATE_KEY, JSON.stringify(marketState));
@@ -593,176 +486,130 @@ app.post('/webhook', async (req, res) => {
     }
 
     // ─────────────────────────────────────────
-    // ENTRY SIGNAL WEBHOOK (1M / 3M / 5M)
-    // Actions: SIGNAL, ENTRY_FILLED, TP_HIT, SL_HIT
-    //
-    // SIGNAL → Telegram (God/Aligned routing)
-    // ENTRY_FILLED / TP_HIT / SL_HIT → Stats only (NO Telegram)
+    // ENTRY SIGNAL WEBHOOK (1M, 3M, 5M)
     // ─────────────────────────────────────────
     if (isEntry) {
-        const { symbol, type, direction, entry, sl, tp, rr, tf, touched_level, action } = payload;
+        const { symbol, type, direction, entry, sl, tp, rr, touched_level, action } = payload;
+        const entryTf = normalizeTf(payload.tf);
 
         if (!symbol || !type || !direction || entry === undefined || sl === undefined) {
             return res.status(400).send("Invalid Entry Payload");
         }
 
-        // Validate TF
-        const entryTF  = tf ? tf.toUpperCase() : null;
-        const tfConfig = entryTF ? TF_CHANNELS[entryTF] : null;
+        console.log(`\n[ENTRY] ${symbol} | ${type} | ${direction} | ${action} | TF: ${entryTf} | Entry: ${entry} | SL: ${sl}`);
 
-        if (!entryTF || !tfConfig) {
-            console.log(`[ENTRY] ${symbol} | Unknown TF: "${tf}" | Accepted: ${ENTRY_TIMEFRAMES.join(', ')}`);
-            return res.status(400).send(`Invalid entry TF: "${tf}". Must be one of: ${ENTRY_TIMEFRAMES.join(', ')}`);
-        }
+        // Record to stats engine
+        const channelUsed = action === "SIGNAL" ? "pending" : "tracked";
+        await recordTradeEvent(symbol, entryTf, direction, action, entry, sl, tp, rr, touched_level, channelUsed);
 
-        const entryAction = (action || "SIGNAL").toUpperCase();
-        const tracker     = getTracker(entryTF, symbol);
-        const rrVal       = rr || 5;
-        const tpVal       = tp || (direction === "BULLISH"
-            ? parseFloat(entry) + Math.abs(parseFloat(entry) - parseFloat(sl)) * rrVal
-            : parseFloat(entry) - Math.abs(parseFloat(entry) - parseFloat(sl)) * rrVal);
+        // Only send Telegram on SIGNAL action
+        if (action === "SIGNAL") {
+            let soundTriggered = false;
 
-        console.log(`\n[${entryAction} ${entryTF}] ${symbol} | ${type} | ${direction} | Entry: ${entry} | SL: ${sl} | TP: ${tpVal}`);
+            // ── GOD MODE CHECK (3/3) ──
+            const godCheck = validateGodMode(symbol, direction);
+            if (godCheck.valid) {
+                const chatId = getGodChannel(entryTf);
+                if (chatId) {
+                    const emoji = direction === "BULLISH" ? "🟢 🐂" : "🔴 🐻";
+                    let msg = `<b>${emoji} GOD-MODE ENTRY: ${symbol}</b>\n\n`;
+                    msg += `<b>Type:</b> ${type}\n`;
+                    msg += `<b>TF:</b> ${entryTf}\n`;
+                    msg += `<b>Entry:</b> <code>${entry}</code>\n`;
+                    msg += `<b>SL:</b> <code>${sl}</code>\n`;
+                    if (tp) msg += `<b>TP:</b> <code>${tp}</code>\n`;
+                    if (rr) msg += `<b>R:R:</b> ${rr}\n`;
+                    if (touched_level) msg += `<b>Level:</b> ${touched_level}\n`;
+                    msg += `\n<b>Alignment:</b> ✅ GOD-MODE (3/3)\n`;
+                    msg += `<b>1H:</b> ${marketState[symbol]?.timeframes?.["1H"] || "?"}\n`;
+                    msg += `<b>30M:</b> ${marketState[symbol]?.timeframes?.["30M"] || "?"}\n`;
+                    msg += `<b>15M:</b> ${marketState[symbol]?.timeframes?.["15M"] || "?"}`;
 
-        // ══════════════════════════════════════
-        // ACTION: SIGNAL — new pattern detected
-        // Trade starts as PENDING (waiting for entry fill)
-        // Sent to Telegram for God/Aligned routing
-        // ══════════════════════════════════════
-        if (entryAction === "SIGNAL") {
+                    const sent = await sendTelegram(chatId, msg);
+                    if (sent) {
+                        console.log(`✅ [GOD ${entryTf}] Sent to Telegram for ${symbol}`);
+                        soundTriggered = true;
 
-            // Store trade as PENDING
-            tracker.trades.push({
-                entry:         parseFloat(entry),
-                sl:            parseFloat(sl),
-                tp:            parseFloat(tpVal),
-                rr:            rrVal,
+                        // Update channel in stats
+                        if (tradeStats[symbol]?.[entryTf]?.trades) {
+                            const trades = tradeStats[symbol][entryTf].trades;
+                            for (let i = trades.length - 1; i >= 0; i--) {
+                                if (trades[i].status === 'SIGNAL' && trades[i].direction === direction) {
+                                    trades[i].channel = `GOD_${entryTf}`;
+                                    break;
+                                }
+                            }
+                            await redisClient.set(REDIS_STATS_KEY, JSON.stringify(tradeStats));
+                        }
+                    }
+                }
+            } else {
+                console.log(`❌ [GOD ${entryTf}] ${symbol}: ${godCheck.reason}`);
+            }
+
+            // ── PARTIAL CHECK (2/3) ──
+            const partialCheck = validatePartial(symbol, direction);
+            if (partialCheck.valid && !godCheck.valid) {
+                const chatId = getPartialChannel(entryTf);
+                if (chatId) {
+                    const emoji = direction === "BULLISH" ? "🟡 🐂" : "🟠 🐻";
+                    let msg = `<b>${emoji} PARTIAL ENTRY: ${symbol}</b>\n\n`;
+                    msg += `<b>Type:</b> ${type}\n`;
+                    msg += `<b>TF:</b> ${entryTf}\n`;
+                    msg += `<b>Entry:</b> <code>${entry}</code>\n`;
+                    msg += `<b>SL:</b> <code>${sl}</code>\n`;
+                    if (tp) msg += `<b>TP:</b> <code>${tp}</code>\n`;
+                    if (rr) msg += `<b>R:R:</b> ${rr}\n`;
+                    if (touched_level) msg += `<b>Level:</b> ${touched_level}\n`;
+                    msg += `\n<b>Alignment:</b> ⚠️ Partial (${partialCheck.alignCount}/3)\n`;
+                    msg += `<b>1H:</b> ${marketState[symbol]?.timeframes?.["1H"] || "?"}\n`;
+                    msg += `<b>30M:</b> ${marketState[symbol]?.timeframes?.["30M"] || "?"}\n`;
+                    msg += `<b>15M:</b> ${marketState[symbol]?.timeframes?.["15M"] || "?"}`;
+
+                    const sent = await sendTelegram(chatId, msg);
+                    if (sent) {
+                        console.log(`✅ [PARTIAL ${entryTf}] Sent to Telegram for ${symbol}`);
+                        if (!soundTriggered) soundTriggered = true;
+
+                        if (tradeStats[symbol]?.[entryTf]?.trades) {
+                            const trades = tradeStats[symbol][entryTf].trades;
+                            for (let i = trades.length - 1; i >= 0; i--) {
+                                if (trades[i].status === 'SIGNAL' && trades[i].direction === direction) {
+                                    trades[i].channel = `PARTIAL_${entryTf}`;
+                                    break;
+                                }
+                            }
+                            await redisClient.set(REDIS_STATS_KEY, JSON.stringify(tradeStats));
+                        }
+                    }
+                }
+            } else if (!godCheck.valid) {
+                console.log(`❌ [PARTIAL ${entryTf}] ${symbol}: ${partialCheck.reason}`);
+            }
+
+            if (soundTriggered) {
+                broadcastSoundAlert(symbol, direction, 'entry');
+            }
+
+            // Log signal
+            await pushLogEvent(
+                symbol,
                 direction,
-                type,
-                touched_level: touched_level || "N/A",
-                status:        "PENDING",
-                timestamp:     Date.now()
-            });
-
-            // Trim old trades (keep last 100)
-            if (tracker.trades.length > 100) tracker.trades = tracker.trades.slice(-100);
-            recalcTrackerCounts(tracker);
-
-            // ── Telegram: SIGNAL only ──
-            const emoji      = direction === "BULLISH" ? "🟢 🐂" : "🔴 🐻";
-            const alignedTFs = getAlignedTFs(symbol, direction);
-            const zone       = getZoneDisplay(symbol);
-
-            // God Mode channel (3/3)
-            const godValidation = validateGodModeEntry(symbol, direction);
-            if (godValidation.valid) {
-                console.log(`✅ [GOD ${entryTF}] ${symbol} | ${direction} | ${godValidation.alignmentCount}/3`);
-
-                let msg  = `<b>${emoji} ⚡ GOD SIGNAL [${entryTF}]: ${symbol}</b>\n\n`;
-                msg += `<b>Timeframe:</b> ${tfConfig.label} (${entryTF})\n`;
-                msg += `<b>Type:</b> ${type}\n`;
-                msg += `<b>Direction:</b> ${direction}\n`;
-                msg += `<b>Entry:</b> <code>${entry}</code>\n`;
-                msg += `<b>SL:</b> <code>${sl}</code>\n`;
-                msg += `<b>TP (${rrVal}R):</b> <code>${tpVal}</code>\n`;
-                msg += `<b>Level:</b> ${touched_level || "N/A"}\n`;
-                msg += `\n<b>Storyline:</b> ✅ ${godValidation.godState} (${godValidation.alignmentCount}/3)\n`;
-                msg += `<b>Aligned:</b> ${alignedTFs}\n`;
-                msg += `<b>Ref Zone:</b> <code>${zone.bo}</code> → <code>${zone.sl}</code>\n`;
-                msg += `<b>Status:</b> ⚡ GOD MODE`;
-
-                await sendGodModeEntry(entryTF, msg);
-            } else {
-                console.log(`❌ [GOD ${entryTF} REJECTED] ${symbol} | ${godValidation.reason}`);
-            }
-
-            // Aligned channel (2/3)
-            const alignValidation = validateAlignedEntry(symbol, direction);
-            if (alignValidation.valid) {
-                const isGodMode = alignValidation.alignmentCount >= GOD_MODE_THRESHOLD;
-                const statusTag = isGodMode ? "⚡ GOD MODE" : "🔶 ALIGNED";
-
-                console.log(`✅ [ALIGNED ${entryTF}] ${symbol} | ${direction} | ${alignValidation.alignmentCount}/3`);
-
-                let msg  = `<b>${emoji} ALIGNED SIGNAL [${entryTF}]: ${symbol}</b>\n\n`;
-                msg += `<b>Timeframe:</b> ${tfConfig.label} (${entryTF})\n`;
-                msg += `<b>Type:</b> ${type}\n`;
-                msg += `<b>Direction:</b> ${direction}\n`;
-                msg += `<b>Entry:</b> <code>${entry}</code>\n`;
-                msg += `<b>SL:</b> <code>${sl}</code>\n`;
-                msg += `<b>TP (${rrVal}R):</b> <code>${tpVal}</code>\n`;
-                msg += `<b>Level:</b> ${touched_level || "N/A"}\n`;
-                msg += `\n<b>Storyline:</b> ✅ ${alignValidation.godState} (${alignValidation.alignmentCount}/3)\n`;
-                msg += `<b>Aligned:</b> ${alignedTFs}\n`;
-                msg += `<b>Ref Zone:</b> <code>${zone.bo}</code> → <code>${zone.sl}</code>\n`;
-                msg += `<b>Status:</b> ${statusTag}`;
-
-                await sendAlignedEntry(entryTF, msg);
-            } else {
-                console.log(`❌ [ALIGNED ${entryTF} REJECTED] ${symbol} | ${alignValidation.reason}`);
-            }
-
-        // ══════════════════════════════════════
-        // ACTION: ENTRY_FILLED — price came back to entry
-        // Stats only, NO Telegram
-        // ══════════════════════════════════════
-        } else if (entryAction === "ENTRY_FILLED") {
-            const trade = tracker.trades.find(t =>
-                t.status === "PENDING" &&
-                Math.abs(t.entry - parseFloat(entry)) < 0.0001 &&
-                t.direction === direction
+                `${type} ${entryTf} | Entry: ${entry} | SL: ${sl}${godCheck.valid ? ' | GOD ✅' : partialCheck.valid ? ' | PARTIAL ⚠️' : ' | NO ALIGN ❌'}`,
+                Date.now()
             );
-            if (trade) {
-                trade.status = "ACTIVE";
-                console.log(`📥 [ENTRY FILLED ${entryTF}] ${symbol} | ${direction} | Entry: ${entry}`);
-            } else {
-                console.log(`⚠️ [ENTRY FILLED ${entryTF}] ${symbol} | No matching PENDING trade found`);
-            }
-            recalcTrackerCounts(tracker);
 
-        // ══════════════════════════════════════
-        // ACTION: TP_HIT — take profit reached
-        // Entry always filled before TP (guaranteed)
-        // Can come on same candle as ENTRY_FILLED
-        // Stats only, NO Telegram
-        // ══════════════════════════════════════
-        } else if (entryAction === "TP_HIT") {
-            // Find ACTIVE trade first, then PENDING (same-candle entry+TP)
-            const trade = tracker.trades.find(t =>
-                (t.status === "ACTIVE" || t.status === "PENDING") &&
-                Math.abs(t.entry - parseFloat(entry)) < 0.0001 &&
-                t.direction === direction
+        } else if (action === "ENTRY_FILLED" || action === "TP_HIT" || action === "SL_HIT") {
+            // Log tracking events
+            const emoji = action === "TP_HIT" ? "🎯" : action === "SL_HIT" ? "💀" : "📥";
+            await pushLogEvent(
+                symbol,
+                action === "TP_HIT" ? "BULLISH" : action === "SL_HIT" ? "BEARISH" : direction,
+                `${emoji} ${action}: ${type} ${entryTf} | Entry: ${entry}`,
+                Date.now()
             );
-            if (trade) {
-                trade.status = "TP_HIT";
-                console.log(`✅ [TP HIT ${entryTF}] ${symbol} | ${direction} | Entry: ${entry} | TP: ${tpVal}`);
-            } else {
-                console.log(`⚠️ [TP HIT ${entryTF}] ${symbol} | No matching trade found`);
-            }
-            recalcTrackerCounts(tracker);
-
-        // ══════════════════════════════════════
-        // ACTION: SL_HIT — stop loss reached
-        // Entry always filled before SL (guaranteed)
-        // Can come on same candle as ENTRY_FILLED
-        // Stats only, NO Telegram
-        // ══════════════════════════════════════
-        } else if (entryAction === "SL_HIT") {
-            const trade = tracker.trades.find(t =>
-                (t.status === "ACTIVE" || t.status === "PENDING") &&
-                Math.abs(t.entry - parseFloat(entry)) < 0.0001 &&
-                t.direction === direction
-            );
-            if (trade) {
-                trade.status = "SL_HIT";
-                console.log(`❌ [SL HIT ${entryTF}] ${symbol} | ${direction} | Entry: ${entry} | SL: ${sl}`);
-            } else {
-                console.log(`⚠️ [SL HIT ${entryTF}] ${symbol} | No matching trade found`);
-            }
-            recalcTrackerCounts(tracker);
         }
 
-        await saveTracker();
         broadcastAll();
         return res.status(200).send("OK");
     }
@@ -771,19 +618,24 @@ app.post('/webhook', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════
-// START SERVER
+// SERVE PAGES
+// ══════════════════════════════════════════════
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/stats', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'stats.html'));
+});
+
+// ══════════════════════════════════════════════
+// START
 // ══════════════════════════════════════════════
 app.listen(PORT, () => {
-    console.log(`\n🚀 God-Mode V3.5 (Key: ${REDIS_STATE_KEY}) on port ${PORT}`);
-    console.log(`\n📐 STORYLINE TIMEFRAMES: ${ZONE_TIMEFRAMES.join(' + ')}`);
-    console.log(`📐 ENTRY TIMEFRAMES:     ${ENTRY_TIMEFRAMES.join(' + ')}`);
-    console.log(`\n📊 God Mode Threshold:  ${GOD_MODE_THRESHOLD}/3`);
-    console.log(`📊 Aligned Threshold:   ${ALIGNED_THRESHOLD}/3`);
-    console.log(`\n📡 Storyline Alerts → ${TELEGRAM_STORYLINE_CHAT_ID || '❌ NOT SET'}`);
-    console.log(`\n📡 Entry Channels:`);
-    ENTRY_TIMEFRAMES.forEach(tf => {
-        const ch = TF_CHANNELS[tf];
-        console.log(`   ${tf}: GOD → ${ch?.god || '❌ NOT SET'} | ALL → ${ch?.all || '❌ NOT SET'}`);
-    });
-    console.log(`\n📡 SIGNAL → Telegram | ENTRY_FILLED / TP_HIT / SL_HIT → Stats only (webpage)`);
+    console.log(`\n🚀 God-Mode V3 (Key: ${REDIS_STATE_KEY}) alive on port ${PORT}`);
+    console.log(`📊 Alignment Threshold: ${ALIGNMENT_THRESHOLD}/3 (1H + 30M + 15M)`);
+    console.log(`📡 Entry TFs: ${ENTRY_TIMEFRAMES.join(', ')}`);
+    console.log(`📡 Storyline → ${TELEGRAM_STORYLINE_CHAT_ID}`);
+    console.log(`📡 God 5M: ${TG_5M_GOD} | 3M: ${TG_3M_GOD} | 1M: ${TG_1M_GOD}`);
+    console.log(`📡 Partial 5M: ${TG_5M_PARTIAL} | 3M: ${TG_3M_PARTIAL} | 1M: ${TG_1M_PARTIAL}`);
 });
