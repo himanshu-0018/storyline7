@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Statistics — God-Mode v3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing:border-box;margin:0;padding:0; }
+        body {
+            font-family:'Inter',sans-serif;
+            background:#0a0e1a;color:#e2e8f0;
+            min-height:100vh;overflow-x:hidden;
+        }
+        .bg-container {
+            position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+        }
+        .bg-gradient {
+            position:absolute;inset:0;
+            background:
+                radial-gradient(ellipse at 0% 0%, rgba(99,102,241,0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, rgba(245,158,11,0.15) 0%, transparent 50%),
+                linear-gradient(135deg, rgba(10,14,26,0.9) 0%, rgba(15,20,40,0.85) 100%);
+        }
+        .bg-grid {
+            position:absolute;inset:0;
+            background-image:
+                linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+            background-size:50px 50px;
+        }
+
+        .top-bar {
+            position:relative;z-index:10;padding:16px 24px;
+            display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+            border-bottom:1px solid rgba(255,255,255,0.08);
+            background:rgba(10,14,26,0.7);backdrop-filter:blur(20px);
+        }
+        .brand-name {
+            font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;letter-spacing:0.05em;
+            background:linear-gradient(135deg,#fbbf24,#f59e0b,#d97706);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+        }
+        .brand-sub {
+            font-family:'JetBrains Mono',monospace;font-size:0.58rem;
+            color:rgba(148,163,184,0.65);letter-spacing:0.12em;margin-top:2px;
+        }
+        .ctrl-btn {
+            display:inline-flex;align-items:center;gap:6px;
+            padding:7px 16px;border-radius:10px;
+            font-size:0.72rem;font-weight:700;letter-spacing:0.04em;
+            cursor:pointer;transition:all 0.2s ease;border:1px solid;
+            backdrop-filter:blur(10px);font-family:'JetBrains Mono',monospace;
+            text-decoration:none;
+        }
+        .ctrl-btn:hover { transform:translateY(-2px); }
+        .btn-back {
+            background:linear-gradient(135deg,rgba(99,102,241,0.25),rgba(14,165,233,0.15));
+            border-color:rgba(99,102,241,0.5);color:#a5b4fc;
+        }
+        .btn-back:hover { background:linear-gradient(135deg,rgba(99,102,241,0.4),rgba(14,165,233,0.25));color:#c7d2fe; }
+        .btn-clear {
+            background:linear-gradient(135deg,rgba(239,68,68,0.25),rgba(153,27,27,0.15));
+            border-color:rgba(239,68,68,0.5);color:#fca5a5;
+        }
+        .btn-clear:hover { background:linear-gradient(135deg,rgba(239,68,68,0.4),rgba(153,27,27,0.25));color:#fee2e2; }
+        .btn-refresh {
+            background:linear-gradient(135deg,rgba(16,185,129,0.25),rgba(52,211,153,0.15));
+            border-color:rgba(16,185,129,0.5);color:#34d399;
+        }
+        .btn-refresh:hover { background:linear-gradient(135deg,rgba(16,185,129,0.4),rgba(52,211,153,0.25));color:#6ee7b7; }
+
+        .main-content {
+            position:relative;z-index:10;padding:24px;
+            max-width:1400px;margin:0 auto;
+        }
+
+        /* Global Summary Cards */
+        .summary-row {
+            display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+            gap:12px;margin-bottom:24px;
+        }
+        .summary-card {
+            padding:16px;border-radius:14px;
+            background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.08);
+            backdrop-filter:blur(10px);text-align:center;
+        }
+        .summary-card .sc-val {
+            font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;
+            line-height:1;margin-bottom:4px;
+        }
+        .summary-card .sc-label {
+            font-family:'JetBrains Mono',monospace;font-size:0.6rem;
+            color:rgba(148,163,184,0.5);text-transform:uppercase;letter-spacing:0.1em;
+        }
+        .sc-signals  .sc-val { color:#38bdf8; }
+        .sc-entries   .sc-val { color:#a78bfa; }
+        .sc-tp        .sc-val { color:#34d399; }
+        .sc-sl        .sc-val { color:#f87171; }
+        .sc-winrate   .sc-val { color:#fbbf24; }
+        .sc-pending   .sc-val { color:#94a3b8; }
+
+        /* Filter Bar */
+        .filter-bar {
+            display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;
+        }
+        .filter-btn {
+            padding:6px 14px;border-radius:8px;
+            font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;
+            cursor:pointer;transition:all 0.2s;border:1px solid;
+            letter-spacing:0.04em;
+        }
+        .filter-btn.active {
+            background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(251,191,36,0.15));
+            border-color:rgba(245,158,11,0.6);color:#fde68a;
+            box-shadow:0 0 15px rgba(245,158,11,0.2);
+        }
+        .filter-btn:not(.active) {
+            background:rgba(30,41,59,0.6);border-color:rgba(71,85,105,0.4);color:#64748b;
+        }
+        .filter-btn:not(.active):hover { border-color:rgba(100,116,139,0.6);color:#94a3b8; }
+
+        /* Coin Stats Cards */
+        .coin-stats-grid {
+            display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+            gap:16px;
+        }
+        .coin-stats-card {
+            border-radius:16px;padding:18px;
+            background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.08);
+            backdrop-filter:blur(10px);position:relative;overflow:hidden;
+        }
+        .coin-stats-card::before {
+            content:'';position:absolute;top:0;left:0;right:0;height:2px;
+            background:linear-gradient(90deg,transparent,rgba(245,158,11,0.5),rgba(251,191,36,0.5),transparent);
+        }
+        .csc-header {
+            display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;
+        }
+        .csc-symbol {
+            font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;color:#f1f5f9;
+        }
+        .csc-winrate {
+            font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:700;
+            padding:4px 10px;border-radius:8px;
+        }
+        .wr-good { background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#34d399; }
+        .wr-mid { background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24; }
+        .wr-bad { background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171; }
+        .wr-na { background:rgba(71,85,105,0.2);border:1px solid rgba(71,85,105,0.4);color:#64748b; }
+
+        /* TF Breakdown Table */
+        .tf-table {
+            width:100%;border-collapse:collapse;margin-top:8px;
+        }
+        .tf-table th {
+            font-family:'JetBrains Mono',monospace;font-size:0.5rem;font-weight:700;
+            text-transform:uppercase;letter-spacing:0.1em;color:rgba(148,163,184,0.4);
+            padding:6px 8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06);
+        }
+        .tf-table th:first-child { text-align:left; }
+        .tf-table td {
+            font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:600;
+            padding:8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);
+        }
+        .tf-table td:first-child {
+            text-align:left;color:rgba(203,213,225,0.7);font-size:0.65rem;
+        }
+        .tf-table .td-signals { color:#38bdf8; }
+        .tf-table .td-entries { color:#a78bfa; }
+        .tf-table .td-tp { color:#34d399; }
+        .tf-table .td-sl { color:#f87171; }
+        .tf-table .td-wr { color:#fbbf24; }
+        .tf-table .td-active { color:#94a3b8; }
+
+        /* Recent trades list */
+        .recent-header {
+            font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;
+            color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.1em;
+            margin-top:12px;margin-bottom:6px;
+        }
+        .trade-row {
+            display:flex;align-items:center;gap:6px;
+            padding:5px 8px;border-radius:6px;margin-bottom:3px;
+            font-family:'JetBrains Mono',monospace;font-size:0.58rem;
+        }
+        .trade-row.tr-tp { background:rgba(16,185,129,0.08);border-left:2px solid #10b981; }
+        .trade-row.tr-sl { background:rgba(239,68,68,0.08);border-left:2px solid #ef4444; }
+        .trade-row.tr-active { background:rgba(99,102,241,0.08);border-left:2px solid #6366f1; }
+        .trade-row.tr-signal { background:rgba(71,85,105,0.08);border-left:2px solid #475569; }
+
+        .empty-stats {
+            font-family:'JetBrains Mono',monospace;font-size:0.8rem;
+            color:rgba(148,163,184,0.3);text-align:center;padding:60px 20px;
+        }
+
+        .modal-backdrop {
+            position:fixed;inset:0;z-index:100;
+            background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);
+            display:none;align-items:center;justify-content:center;padding:16px;
+        }
+        .modal-box {
+            background:linear-gradient(135deg,rgba(10,14,26,0.98),rgba(15,20,40,0.98));
+            border:1px solid rgba(239,68,68,0.3);border-radius:20px;
+            padding:28px;width:100%;max-width:440px;position:relative;
+            box-shadow:0 0 60px rgba(239,68,68,0.2),0 40px 80px rgba(0,0,0,0.6);
+        }
+        .modal-box::before {
+            content:'';position:absolute;top:0;left:0;right:0;height:1px;border-radius:20px 20px 0 0;
+            background:linear-gradient(90deg,transparent,rgba(239,68,68,0.6),rgba(248,113,113,0.6),transparent);
+        }
+        .modal-title { font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;color:#fca5a5;margin-bottom:4px; }
+        .modal-sub { font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.55);margin-bottom:24px; }
+        .field-label {
+            font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:700;
+            text-transform:uppercase;letter-spacing:0.1em;color:rgba(239,68,68,0.6);
+            display:block;margin-bottom:5px;
+        }
+        .field-input {
+            width:100%;padding:10px 14px;
+            background:rgba(15,23,42,0.8);border:1px solid rgba(239,68,68,0.25);
+            border-radius:10px;color:#e2e8f0;
+            font-family:'JetBrains Mono',monospace;font-size:0.85rem;
+            outline:none;transition:all 0.2s;margin-bottom:14px;text-transform:uppercase;
+        }
+        .field-input:focus { border-color:rgba(239,68,68,0.6);box-shadow:0 0 0 3px rgba(239,68,68,0.1); }
+        .btn-cancel {
+            flex:1;padding:11px;border-radius:10px;
+            border:1px solid rgba(71,85,105,0.5);color:#94a3b8;background:rgba(15,23,42,0.5);
+            font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;
+            cursor:pointer;transition:all 0.2s;
+        }
+        .btn-cancel:hover { border-color:rgba(100,116,139,0.8);color:#cbd5e1; }
+        .btn-purge-confirm {
+            flex:1;padding:11px;border-radius:10px;
+            background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(153,27,27,0.2));
+            border:1px solid rgba(239,68,68,0.5);color:#fca5a5;
+            font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;
+            cursor:pointer;transition:all 0.2s;
+        }
+        .btn-purge-confirm:hover { background:linear-gradient(135deg,rgba(239,68,68,0.5),rgba(153,27,27,0.35));color:#fee2e2; }
+        .btn-purge-all {
+            width:100%;padding:11px;border-radius:10px;margin-top:10px;
+            background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(153,27,27,0.1));
+            border:1px solid rgba(239,68,68,0.3);color:rgba(252,165,165,0.7);
+            font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:700;
+            cursor:pointer;transition:all 0.2s;
+        }
+        .btn-purge-all:hover { background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(153,27,27,0.2));color:#fca5a5; }
+
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:rgba(99,102,241,0.3);border-radius:4px; }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-gradient"></div>
+        <div class="bg-grid"></div>
+    </div>
+
+    <div class="top-bar">
+        <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;
+                background:linear-gradient(135deg,#f59e0b,#d97706,#b45309);
+                display:flex;align-items:center;justify-content:center;font-size:1.3rem;">📊</div>
+            <div>
+                <div class="brand-name">TRADE STATISTICS</div>
+                <div class="brand-sub">ENTRY / TP / SL TRACKING · PER COIN · PER TIMEFRAME</div>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <a href="/" class="ctrl-btn btn-back"><span>⚡</span> DASHBOARD</a>
+            <button onclick="loadStats()" class="ctrl-btn btn-refresh"><span>🔄</span> REFRESH</button>
+            <button onclick="openClearModal()" class="ctrl-btn btn-clear"><span>🗑️</span> CLEAR STATS</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Global Summary -->
+        <div class="summary-row" id="summaryRow">
+            <div class="summary-card sc-signals"><div class="sc-val" id="gSignals">0</div><div class="sc-label">Total Signals</div></div>
+            <div class="summary-card sc-entries"><div class="sc-val" id="gEntries">0</div><div class="sc-label">Entries Filled</div></div>
+            <div class="summary-card sc-tp"><div class="sc-val" id="gTP">0</div><div class="sc-label">TP Hits</div></div>
+            <div class="summary-card sc-sl"><div class="sc-val" id="gSL">0</div><div class="sc-label">SL Hits</div></div>
+            <div class="summary-card sc-winrate"><div class="sc-val" id="gWR">—</div><div class="sc-label">Win Rate</div></div>
+            <div class="summary-card sc-pending"><div class="sc-val" id="gPending">0</div><div class="sc-label">Active/Pending</div></div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:rgba(148,163,184,0.4);letter-spacing:0.1em;">FILTER TF:</span>
+            <button class="filter-btn active" data-tf="ALL" onclick="setFilter('ALL',this)">ALL</button>
+            <button class="filter-btn" data-tf="5M" onclick="setFilter('5M',this)">5M</button>
+            <button class="filter-btn" data-tf="3M" onclick="setFilter('3M',this)">3M</button>
+            <button class="filter-btn" data-tf="1M" onclick="setFilter('1M',this)">1M</button>
+        </div>
+
+        <!-- Coin Stats Grid -->
+        <div class="coin-stats-grid" id="statsGrid">
+            <div class="empty-stats">Loading statistics...</div>
+        </div>
+    </div>
+
+    <!-- Clear Stats Modal -->
+    <div class="modal-backdrop" id="clearModal">
+        <div class="modal-box">
+            <div class="modal-title">🗑️ Clear Trade Statistics</div>
+            <div class="modal-sub">Remove trade history for a specific coin or all coins.</div>
+            <label class="field-label">Symbol (or leave blank for specific coin)</label>
+            <input type="text" id="clearSymbol" class="field-input" placeholder="e.g. BTCUSDT">
+            <div style="display:flex;gap:10px;">
+                <button onclick="closeClearModal()" class="btn-cancel">CANCEL</button>
+                <button onclick="doClearSymbol()" class="btn-purge-confirm">CLEAR COIN 🗑️</button>
+            </div>
+            <button onclick="doClearAll()" class="btn-purge-all">⚠️ CLEAR ALL STATISTICS</button>
+        </div>
+    </div>
+
+    <script>
+        let currentStats = {};
+        let currentFilter = 'ALL';
+
+        const openClearModal = () => { document.getElementById('clearModal').style.display='flex'; };
+        const closeClearModal = () => { document.getElementById('clearModal').style.display='none'; document.getElementById('clearSymbol').value=''; };
+        document.getElementById('clearModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeClearModal(); });
+
+        async function doClearSymbol() {
+            const sym = document.getElementById('clearSymbol').value.toUpperCase().trim();
+            if (!sym) return alert('Enter a symbol to clear.');
+            try {
+                await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:sym}) });
+                closeClearModal();
+                loadStats();
+            } catch { alert('Failed to clear stats.'); }
+        }
+
+        async function doClearAll() {
+            if (!confirm('Are you sure you want to clear ALL trade statistics?')) return;
+            try {
+                await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:'ALL'}) });
+                closeClearModal();
+                loadStats();
+            } catch { alert('Failed to clear stats.'); }
+        }
+
+        function setFilter(tf, btn) {
+            currentFilter = tf;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderStats();
+        }
+
+        function fmtTime(ts) {
+            if (!ts) return '—';
+            const d = new Date(ts);
+            return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' ' +
+                   d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        }
+
+        function calcWinRate(tp, sl) {
+            const total = tp + sl;
+            if (total === 0) return { pct: null, cls: 'wr-na', txt: 'N/A' };
+            const pct = ((tp / total) * 100).toFixed(1);
+            let cls = 'wr-mid';
+            if (pct >= 60) cls = 'wr-good';
+            else if (pct < 40) cls = 'wr-bad';
+            return { pct, cls, txt: pct + '%' };
+        }
+
+        async function loadStats() {
+            try {
+                const r = await fetch('/api/stats');
+                const data = await r.json();
+                currentStats = data.tradeStats || {};
+                renderStats();
+            } catch (err) {
+                console.error('Failed to load stats:', err);
+            }
+        }
+
+        function renderStats() {
+            const grid = document.getElementById('statsGrid');
+            const tfsToShow = currentFilter === 'ALL' ? ['5M', '3M', '1M'] : [currentFilter];
+
+            // Global totals
+            let gSignals=0, gEntries=0, gTP=0, gSL=0, gPending=0, gActive=0;
+
+            const symbols = Object.keys(currentStats).sort();
+
+            symbols.forEach(sym => {
+                tfsToShow.forEach(tf => {
+                    const s = currentStats[sym]?.[tf];
+                    if (s) {
+                        gSignals += s.total_signals || 0;
+                        gEntries += s.total_entries || 0;
+                        gTP += s.tp_hits || 0;
+                        gSL += s.sl_hits || 0;
+                        gPending += (s.pending || 0) + (s.active || 0);
+                    }
+                });
+            });
+
+            const gWR = calcWinRate(gTP, gSL);
+            document.getElementById('gSignals').textContent = gSignals;
+            document.getElementById('gEntries').textContent = gEntries;
+            document.getElementById('gTP').textContent = gTP;
+            document.getElementById('gSL').textContent = gSL;
+            document.getElementById('gWR').textContent = gWR.txt;
+            document.getElementById('gPending').textContent = gPending;
+
+            if (symbols.length === 0) {
+                grid.innerHTML = '<div class="empty-stats">No trade statistics recorded yet.<br>Signals will appear here as they fire.</div>';
+                return;
+            }
+
+            // Filter symbols that have data for selected TFs
+            const filteredSymbols = symbols.filter(sym => {
+                return tfsToShow.some(tf => currentStats[sym]?.[tf]?.total_signals > 0);
+            });
+
+            if (filteredSymbols.length === 0) {
+                grid.innerHTML = `<div class="empty-stats">No data for ${currentFilter} timeframe yet.</div>`;
+                return;
+            }
+
+            // Sort by total signals desc
+            filteredSymbols.sort((a, b) => {
+                let aTotal=0, bTotal=0;
+                tfsToShow.forEach(tf => {
+                    aTotal += currentStats[a]?.[tf]?.total_signals || 0;
+                    bTotal += currentStats[b]?.[tf]?.total_signals || 0;
+                });
+                return bTotal - aTotal;
+            });
+
+            grid.innerHTML = '';
+
+            filteredSymbols.forEach(sym => {
+                let totalSig=0, totalEnt=0, totalTP=0, totalSL=0, totalPend=0, totalAct=0;
+                let allTrades = [];
+
+                let tableRows = '';
+                tfsToShow.forEach(tf => {
+                    const s = currentStats[sym]?.[tf];
+                    if (!s || s.total_signals === 0) return;
+
+                    totalSig += s.total_signals;
+                    totalEnt += s.total_entries;
+                    totalTP += s.tp_hits;
+                    totalSL += s.sl_hits;
+                    totalPend += s.pending || 0;
+                    totalAct += s.active || 0;
+
+                    const wr = calcWinRate(s.tp_hits, s.sl_hits);
+
+                    tableRows += `
+                        <tr>
+                            <td>${tf}</td>
+                            <td class="td-signals">${s.total_signals}</td>
+                            <td class="td-entries">${s.total_entries}</td>
+                            <td class="td-tp">${s.tp_hits}</td>
+                            <td class="td-sl">${s.sl_hits}</td>
+                            <td class="td-wr">${wr.txt}</td>
+                            <td class="td-active">${(s.pending||0)+(s.active||0)}</td>
+                        </tr>
+                    `;
+
+                    if (s.trades) {
+                        allTrades = allTrades.concat(s.trades.map(t => ({...t, _tf: tf})));
+                    }
+                });
+
+                if (!tableRows) return;
+
+                const wr = calcWinRate(totalTP, totalSL);
+
+                // Recent trades (last 8)
+                allTrades.sort((a,b) => (b.signal_time||0) - (a.signal_time||0));
+                const recent = allTrades.slice(0, 8);
+
+                let recentHTML = '';
+                recent.forEach(t => {
+                    let cls, icon, statusTxt;
+                    if (t.status === 'TP_HIT') { cls='tr-tp'; icon='🎯'; statusTxt='TP HIT'; }
+                    else if (t.status === 'SL_HIT') { cls='tr-sl'; icon='💀'; statusTxt='SL HIT'; }
+                    else if (t.status === 'ACTIVE') { cls='tr-active'; icon='📥'; statusTxt='ACTIVE'; }
+                    else { cls='tr-signal'; icon='📡'; statusTxt='SIGNAL'; }
+
+                    const dirIcon = t.direction === 'BULLISH' ? '🐂' : '🐻';
+                    const time = fmtTime(t.result_time || t.entry_time || t.signal_time);
+
+                    recentHTML += `
+                        <div class="trade-row ${cls}">
+                            <span>${icon}</span>
+                            <span>${dirIcon}</span>
+                            <span style="color:rgba(203,213,225,0.6);">${t._tf}</span>
+                            <span style="color:#38bdf8;">${t.entry}</span>
+                            <span style="color:rgba(148,163,184,0.4);">→</span>
+                            <span style="color:${t.status==='TP_HIT'?'#34d399':t.status==='SL_HIT'?'#f87171':'#94a3b8'};">${statusTxt}</span>
+                            <span style="margin-left:auto;color:rgba(148,163,184,0.35);font-size:0.5rem;">${time}</span>
+                        </div>
+                    `;
+                });
+
+                grid.insertAdjacentHTML('beforeend', `
+                    <div class="coin-stats-card">
+                        <div class="csc-header">
+                            <span class="csc-symbol">${sym}</span>
+                            <span class="csc-winrate ${wr.cls}">WR: ${wr.txt}</span>
+                        </div>
+
+                        <table class="tf-table">
+                            <thead>
+                                <tr>
+                                    <th>TF</th>
+                                    <th>Signals</th>
+                                    <th>Entries</th>
+                                    <th>TP ✅</th>
+                                    <th>SL ❌</th>
+                                    <th>Win%</th>
+                                    <th>Live</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                                ${tfsToShow.length > 1 ? `
+                                <tr style="border-top:1px solid rgba(255,255,255,0.1);">
+                                    <td style="font-weight:800;color:#fbbf24;">TOTAL</td>
+                                    <td class="td-signals" style="font-weight:800;">${totalSig}</td>
+                                    <td class="td-entries" style="font-weight:800;">${totalEnt}</td>
+                                    <td class="td-tp" style="font-weight:800;">${totalTP}</td>
+                                    <td class="td-sl" style="font-weight:800;">${totalSL}</td>
+                                    <td class="td-wr" style="font-weight:800;">${wr.txt}</td>
+                                    <td class="td-active" style="font-weight:800;">${totalPend+totalAct}</td>
+                                </tr>` : ''}
+                            </tbody>
+                        </table>
+
+                        ${recentHTML ? `
+                            <div class="recent-header">Recent Trades</div>
+                            ${recentHTML}
+                        ` : ''}
+                    </div>
+                `);
+            });
+        }
+
+        // Auto-load on page open
+        loadStats();
+
+        // Auto-refresh every 30s
+        setInterval(loadStats, 30000);
+    </script>
+</body>
+</html>
