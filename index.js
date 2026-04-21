@@ -29,8 +29,9 @@ const ENTRY_TIMEFRAMES    = ["5M", "3M", "1M"];
 
 let marketState = {};
 let activityLog = [];
-let tradeStats  = {};   // { [symbol]: { [tf]: { ...counters, trades: Trade[] } } }
+let tradeStats  = {};
 let clients     = [];
+let statsClients = [];
 
 // ══════════════════════════════════════════════
 // BROADCAST
@@ -42,6 +43,11 @@ function broadcastAll(extras = {}) {
 function broadcastSoundAlert(symbol, direction) {
     const data = JSON.stringify({ soundAlert: true, symbol, direction });
     clients.forEach(c => c.res.write(`data: ${data}\n\n`));
+}
+function broadcastStats() {
+    const enriched = buildEnrichedStats();
+    const data = JSON.stringify({ tradeStats: enriched });
+    statsClients.forEach(c => c.res.write(`data: ${data}\n\n`));
 }
 
 // ══════════════════════════════════════════════
@@ -84,7 +90,7 @@ async function pushLogEvent(symbol, type, message, timestamp = null) {
 }
 
 // ══════════════════════════════════════════════
-// PRICE MATCH — 0.05% tolerance
+// PRICE MATCH
 // ══════════════════════════════════════════════
 function priceMatch(a, b) {
     const fa = parseFloat(a);
@@ -94,39 +100,86 @@ function priceMatch(a, b) {
     return Math.abs(fa - fb) <= tolerance;
 }
 
-// ══════════════════════════════════════════════
-// TRADE ID GENERATOR
-// ══════════════════════════════════════════════
 function makeTradeId(symbol, tf) {
     return `${symbol}_${tf}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
 // ══════════════════════════════════════════════
-// STATS STRUCTURE HELPERS
+// STATS HELPERS
 // ══════════════════════════════════════════════
 function ensureStats(symbol, tf) {
     if (!tradeStats[symbol])     tradeStats[symbol]     = {};
     if (!tradeStats[symbol][tf]) tradeStats[symbol][tf] = {
         total_signals: 0,
-        total_entries: 0,
-        tp_hits:       0,
-        sl_hits:       0,
-        trades:        []        // full trade objects — source of truth
+        trades:        []
     };
     return tradeStats[symbol][tf];
 }
 
-// Derived counters — always calculated live from trades array
-// so they can never go out of sync
 function getLiveCounts(stats) {
     let pending = 0, active = 0, tp = 0, sl = 0, entries = 0;
+    let god_tp = 0, god_sl = 0, god_signals = 0;
+    let partial_tp = 0, partial_sl = 0, partial_signals = 0;
+    let none_tp = 0, none_sl = 0, none_signals = 0;
+
     for (const t of stats.trades) {
+        const align = t.alignment || 'NONE';
+
         if (t.status === 'SIGNAL')  pending++;
         if (t.status === 'ACTIVE')  { active++; entries++; }
-        if (t.status === 'TP_HIT') { tp++;  entries++; }
-        if (t.status === 'SL_HIT') { sl++;  entries++; }
+        if (t.status === 'TP_HIT') { tp++; entries++; }
+        if (t.status === 'SL_HIT') { sl++; entries++; }
+
+        if (align === 'GOD') {
+            god_signals++;
+            if (t.status === 'TP_HIT') god_tp++;
+            if (t.status === 'SL_HIT') god_sl++;
+        } else if (align === 'PARTIAL') {
+            partial_signals++;
+            if (t.status === 'TP_HIT') partial_tp++;
+            if (t.status === 'SL_HIT') partial_sl++;
+        } else {
+            none_signals++;
+            if (t.status === 'TP_HIT') none_tp++;
+            if (t.status === 'SL_HIT') none_sl++;
+        }
     }
-    return { pending, active, tp_hits: tp, sl_hits: sl, total_entries: entries };
+    return {
+        pending, active, tp_hits: tp, sl_hits: sl, total_entries: entries,
+        god_tp, god_sl, god_signals,
+        partial_tp, partial_sl, partial_signals,
+        none_tp, none_sl, none_signals
+    };
+}
+
+function buildEnrichedStats() {
+    const enriched = {};
+    for (const sym in tradeStats) {
+        enriched[sym] = {};
+        for (const tf in tradeStats[sym]) {
+            const s      = tradeStats[sym][tf];
+            const counts = getLiveCounts(s);
+            enriched[sym][tf] = {
+                total_signals: s.total_signals || 0,
+                total_entries: counts.total_entries,
+                tp_hits:       counts.tp_hits,
+                sl_hits:       counts.sl_hits,
+                pending:       counts.pending,
+                active:        counts.active,
+                god_tp:        counts.god_tp,
+                god_sl:        counts.god_sl,
+                god_signals:   counts.god_signals,
+                partial_tp:    counts.partial_tp,
+                partial_sl:    counts.partial_sl,
+                partial_signals: counts.partial_signals,
+                none_tp:       counts.none_tp,
+                none_sl:       counts.none_sl,
+                none_signals:  counts.none_signals,
+                trades:        s.trades
+            };
+        }
+    }
+    return enriched;
 }
 
 async function saveStats() {
@@ -134,58 +187,36 @@ async function saveStats() {
 }
 
 // ══════════════════════════════════════════════
-// MULTI-POSITION SAFE TRADE FINDER
-//
-// Priority order (most specific → least specific):
-//  1. Match tradeId exactly                        (perfect)
-//  2. Match entry price + direction + status       (normal)
-//  3. Match entry price + direction (any open)     (fallback)
-//  4. Match direction + status only (no price)     (last resort)
-//
-// Returns the OLDEST open match — because when multiple positions
-// exist, the oldest one is most likely to close first (FIFO order).
+// MULTI-POSITION TRADE FINDER (FIFO)
 // ══════════════════════════════════════════════
 function findBestTrade(stats, { tradeId, direction, entry, allowedStatuses }) {
     const trades = stats.trades;
 
-    // 1. Exact ID match
     if (tradeId) {
         const idx = trades.findIndex(t => t.id === tradeId);
         if (idx !== -1) return { trade: trades[idx], index: idx };
     }
 
-    // Collect all candidates
     const candidates = [];
 
-    // 2. Price + direction + status (most reliable for multi-position)
     if (entry !== undefined && entry !== null) {
         for (let i = 0; i < trades.length; i++) {
             const t = trades[i];
-            if (
-                t.direction === direction &&
-                allowedStatuses.includes(t.status) &&
-                priceMatch(t.entry, entry)
-            ) {
+            if (t.direction === direction && allowedStatuses.includes(t.status) && priceMatch(t.entry, entry)) {
                 candidates.push({ trade: t, index: i });
             }
         }
     }
 
-    // 3. Price + direction (ignore status — catches same-candle fill+result)
     if (candidates.length === 0 && entry !== undefined && entry !== null) {
         for (let i = 0; i < trades.length; i++) {
             const t = trades[i];
-            if (
-                t.direction === direction &&
-                priceMatch(t.entry, entry) &&
-                ['SIGNAL', 'ACTIVE'].includes(t.status)
-            ) {
+            if (t.direction === direction && priceMatch(t.entry, entry) && ['SIGNAL', 'ACTIVE'].includes(t.status)) {
                 candidates.push({ trade: t, index: i });
             }
         }
     }
 
-    // 4. Direction + status only (no price available)
     if (candidates.length === 0) {
         for (let i = 0; i < trades.length; i++) {
             const t = trades[i];
@@ -196,19 +227,34 @@ function findBestTrade(stats, { tradeId, direction, entry, allowedStatuses }) {
     }
 
     if (candidates.length === 0) return null;
-
-    // FIFO: return the oldest (lowest index = earliest pushed)
     candidates.sort((a, b) => a.index - b.index);
     return candidates[0];
 }
 
 // ══════════════════════════════════════════════
-// RECORD FUNCTIONS — one per action type
+// GET CURRENT ALIGNMENT FOR A SYMBOL
+// ══════════════════════════════════════════════
+function getCurrentAlignment(symbol, direction) {
+    if (!marketState[symbol]) return 'NONE';
+    const godState = marketState[symbol].lastAlertedState;
+    if (godState !== 'NONE' && godState === direction) return 'GOD';
+
+    const tfs = marketState[symbol].timeframes || {};
+    let count = 0;
+    ZONE_TIMEFRAMES.forEach(tf => { if (tfs[tf] === direction) count++; });
+    if (count >= 2) return 'PARTIAL';
+    return 'NONE';
+}
+
+// ══════════════════════════════════════════════
+// RECORD FUNCTIONS
 // ══════════════════════════════════════════════
 
 async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, touchedLevel) {
     const stats = ensureStats(symbol, tf);
     stats.total_signals++;
+
+    const alignment = getCurrentAlignment(symbol, direction);
 
     const trade = {
         id:            makeTradeId(symbol, tf),
@@ -219,19 +265,19 @@ async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, touchedLev
         rr:            parseFloat(rr)     || rr,
         touched_level: touchedLevel || '',
         channel:       'PENDING',
+        alignment:     alignment,
         status:        'SIGNAL',
         signal_time:   Date.now(),
         entry_time:    null,
         result_time:   null
     };
     stats.trades.push(trade);
-
-    // Cap at 500 trades (keep newest)
     if (stats.trades.length > 500) stats.trades = stats.trades.slice(-500);
 
-    console.log(`  [STATS] Signal recorded. ID=${trade.id} | ${symbol} ${tf} ${direction} @ ${entry}`);
+    console.log(`  [STATS] Signal: ID=${trade.id} | ${symbol} ${tf} ${direction} @ ${entry} | Align: ${alignment}`);
     await saveStats();
-    return trade.id;   // return so caller can tag the channel later
+    broadcastStats();
+    return trade.id;
 }
 
 async function recordEntryFilled(symbol, tf, direction, entry) {
@@ -246,16 +292,17 @@ async function recordEntryFilled(symbol, tf, direction, entry) {
     if (found) {
         found.trade.status     = 'ACTIVE';
         found.trade.entry_time = Date.now();
-        console.log(`  [STATS] Entry filled. ID=${found.trade.id} | ${symbol} ${tf} ${direction} @ ${entry}`);
+        console.log(`  [STATS] Filled: ID=${found.trade.id} | ${symbol} ${tf} ${direction} @ ${entry}`);
     } else {
-        // Orphan — no matching SIGNAL (e.g. server restarted mid-trade)
+        const alignment = getCurrentAlignment(symbol, direction);
         console.warn(`  [STATS] Orphan ENTRY_FILLED: ${symbol} ${tf} ${direction} @ ${entry}`);
         stats.trades.push({
             id:           makeTradeId(symbol, tf),
             direction,
             entry:        parseFloat(entry) || entry,
-            sl:           null, tp: null, rr: null,
+            sl: null, tp: null, rr: null,
             channel:      'UNKNOWN',
+            alignment:    alignment,
             status:       'ACTIVE',
             signal_time:  null,
             entry_time:   Date.now(),
@@ -263,13 +310,12 @@ async function recordEntryFilled(symbol, tf, direction, entry) {
         });
     }
     await saveStats();
+    broadcastStats();
 }
 
 async function recordResult(symbol, tf, direction, entry, action) {
     const stats  = ensureStats(symbol, tf);
-    const isTP   = action === 'TP_HIT';
 
-    // Search ACTIVE first, then SIGNAL (same-candle instant fill+result)
     const found = findBestTrade(stats, {
         direction,
         entry,
@@ -280,20 +326,18 @@ async function recordResult(symbol, tf, direction, entry, action) {
         const wasSameCandleFill = found.trade.status === 'SIGNAL';
         found.trade.status      = action;
         found.trade.result_time = Date.now();
-        if (wasSameCandleFill) {
-            // Entry was also filled on same candle — record entry time too
-            found.trade.entry_time = Date.now();
-        }
-        console.log(`  [STATS] ${action} recorded. ID=${found.trade.id} | ${symbol} ${tf} ${direction} @ ${entry}`);
+        if (wasSameCandleFill) found.trade.entry_time = Date.now();
+        console.log(`  [STATS] ${action}: ID=${found.trade.id} | ${symbol} ${tf} ${direction} @ ${entry}`);
     } else {
-        // Orphan result
+        const alignment = getCurrentAlignment(symbol, direction);
         console.warn(`  [STATS] Orphan ${action}: ${symbol} ${tf} ${direction} @ ${entry}`);
         stats.trades.push({
             id:           makeTradeId(symbol, tf),
             direction,
             entry:        parseFloat(entry) || entry,
-            sl:           null, tp: null, rr: null,
+            sl: null, tp: null, rr: null,
             channel:      'UNKNOWN',
+            alignment:    alignment,
             status:       action,
             signal_time:  null,
             entry_time:   null,
@@ -301,10 +345,11 @@ async function recordResult(symbol, tf, direction, entry, action) {
         });
     }
     await saveStats();
+    broadcastStats();
 }
 
 // ══════════════════════════════════════════════
-// ALIGNMENT CALCULATOR
+// ALIGNMENT
 // ══════════════════════════════════════════════
 function recalculateAlignment(symbol) {
     if (!marketState[symbol]) return { dominantState:"NONE", bullCount:0, bearCount:0, partialState:"NONE", partialCount:0 };
@@ -395,13 +440,14 @@ if (savedLog) { activityLog = JSON.parse(savedLog); console.log(`📋 ${activity
 const savedStats = await redisClient.get(REDIS_STATS_KEY);
 if (savedStats) {
     tradeStats = JSON.parse(savedStats);
-    // Migrate old stats: recalculate total_signals from trades array if missing
     for (const sym in tradeStats) {
         for (const tf in tradeStats[sym]) {
             const s = tradeStats[sym][tf];
             if (!s.trades) s.trades = [];
-            // Ensure every trade has an ID
-            s.trades.forEach(t => { if (!t.id) t.id = makeTradeId(sym, tf); });
+            s.trades.forEach(t => {
+                if (!t.id) t.id = makeTradeId(sym, tf);
+                if (!t.alignment) t.alignment = 'NONE';
+            });
         }
     }
     console.log(`📊 Stats for ${Object.keys(tradeStats).length} symbols`);
@@ -412,26 +458,8 @@ if (savedStats) {
 // ══════════════════════════════════════════════
 app.get('/api/state', (req, res) => res.json({ marketState, activityLog }));
 
-// Stats endpoint — returns live-calculated counts, not stale counters
 app.get('/api/stats', (req, res) => {
-    const enriched = {};
-    for (const sym in tradeStats) {
-        enriched[sym] = {};
-        for (const tf in tradeStats[sym]) {
-            const s      = tradeStats[sym][tf];
-            const counts = getLiveCounts(s);
-            enriched[sym][tf] = {
-                total_signals: s.total_signals || 0,
-                total_entries: counts.total_entries,
-                tp_hits:       counts.tp_hits,
-                sl_hits:       counts.sl_hits,
-                pending:       counts.pending,
-                active:        counts.active,
-                trades:        s.trades
-            };
-        }
-    }
-    res.json({ tradeStats: enriched });
+    res.json({ tradeStats: buildEnrichedStats() });
 });
 
 app.get('/api/stream', (req, res) => {
@@ -444,6 +472,18 @@ app.get('/api/stream', (req, res) => {
     clients.push({ id, res });
     const ka = setInterval(() => res.write(': keepalive\n\n'), 15000);
     req.on('close', () => { clearInterval(ka); clients = clients.filter(c => c.id !== id); });
+});
+
+app.get('/api/stats-stream', (req, res) => {
+    res.setHeader('Content-Type',      'text/event-stream');
+    res.setHeader('Cache-Control',     'no-cache');
+    res.setHeader('Connection',        'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+    const id = Date.now();
+    statsClients.push({ id, res });
+    const ka = setInterval(() => res.write(': keepalive\n\n'), 15000);
+    req.on('close', () => { clearInterval(ka); statsClients = statsClients.filter(c => c.id !== id); });
 });
 
 app.post('/api/delete', async (req, res) => {
@@ -468,6 +508,7 @@ app.post('/api/delete-stats', async (req, res) => {
         delete tradeStats[sym];
     }
     await saveStats();
+    broadcastStats();
     res.send("Cleared");
 });
 
@@ -476,12 +517,11 @@ app.post('/api/delete-stats', async (req, res) => {
 // ══════════════════════════════════════════════
 app.post('/webhook', async (req, res) => {
     const payload = req.body;
-
     const isStoryline = payload.state !== undefined && payload.tf !== undefined && payload.type === undefined;
     const isEntry     = payload.type  !== undefined;
 
     // ════════════════════════════════════════
-    // STORYLINE WEBHOOK
+    // STORYLINE
     // ════════════════════════════════════════
     if (isStoryline) {
         const sym   = (payload.symbol || '').toUpperCase().trim();
@@ -498,14 +538,14 @@ app.post('/webhook', async (req, res) => {
 
         if (!marketState[sym]) {
             marketState[sym] = {
-                timeframes:           { "1H":"NONE","30M":"NONE","15M":"NONE" },
-                breakouts:            { "1H":null,"30M":null,"15M":null },
-                stopLosses:           { "1H":null,"30M":null,"15M":null },
-                lastAlertedState:     "NONE",
+                timeframes: { "1H":"NONE","30M":"NONE","15M":"NONE" },
+                breakouts: { "1H":null,"30M":null,"15M":null },
+                stopLosses: { "1H":null,"30M":null,"15M":null },
+                lastAlertedState: "NONE",
                 lastGodModeStartTime: null,
-                alignCount:           0,
-                partialState:         "NONE",
-                partialCount:         0
+                alignCount: 0,
+                partialState: "NONE",
+                partialCount: 0
             };
         }
 
@@ -518,7 +558,6 @@ app.post('/webhook', async (req, res) => {
         const { dominantState, bullCount, bearCount, partialState, partialCount } = recalculateAlignment(sym);
         console.log(`[ALIGN] ${sym} → God:${dominantState} Bull:${bullCount}/3 Bear:${bearCount}/3 Partial:${partialState}(${partialCount})`);
 
-        // God-Mode ON
         if (dominantState !== "NONE" && dominantState !== prev) {
             const now = Date.now();
             marketState[sym].lastAlertedState     = dominantState;
@@ -535,7 +574,6 @@ app.post('/webhook', async (req, res) => {
             console.log(`[GOD ON] ${sym} → ${dominantState}`);
         }
 
-        // God-Mode OFF
         if (dominantState === "NONE" && prev !== "NONE") {
             marketState[sym].lastAlertedState = "NONE";
             let msg  = `<b>⚠️ ALIGNMENT LOST: ${sym}</b>\n\n`;
@@ -552,7 +590,7 @@ app.post('/webhook', async (req, res) => {
     }
 
     // ════════════════════════════════════════
-    // ENTRY WEBHOOK — ALL 4 ACTIONS
+    // ENTRY WEBHOOK
     // ════════════════════════════════════════
     if (isEntry) {
         const sym          = (payload.symbol    || '').toUpperCase().trim();
@@ -572,7 +610,7 @@ app.post('/webhook', async (req, res) => {
 
         console.log(`\n[${action}] ${sym} | ${type} | ${direction} | TF:${entryTf} | Entry:${entry} | SL:${sl} | TP:${tp}`);
 
-        // ── SIGNAL ─────────────────────────────
+        // ── SIGNAL ──
         if (action === "SIGNAL") {
             const newTradeId = await recordSignal(sym, entryTf, direction, entry, sl, tp, rr, touchedLevel);
 
@@ -584,7 +622,6 @@ app.post('/webhook', async (req, res) => {
                 "15M": marketState[sym]?.timeframes?.["15M"] || "?"
             };
 
-            // God-Mode channel
             if (godCheck.valid) {
                 const chatId = getGodChannel(entryTf);
                 if (chatId) {
@@ -602,18 +639,16 @@ app.post('/webhook', async (req, res) => {
                     const sent = await sendTelegram(chatId, msg);
                     if (sent) {
                         soundTriggered = true;
-                        // Tag the trade with its channel
                         const s = tradeStats[sym]?.[entryTf];
                         if (s) {
                             const t = s.trades.find(t => t.id === newTradeId);
-                            if (t) { t.channel = `GOD_${entryTf}`; await saveStats(); }
+                            if (t) { t.channel = `GOD_${entryTf}`; t.alignment = 'GOD'; await saveStats(); broadcastStats(); }
                         }
                         console.log(`  ✅ [GOD ${entryTf}] Alert sent → ${sym}`);
                     }
                 }
             }
 
-            // Partial channel
             if (!godCheck.valid) {
                 const partialCheck = validatePartial(sym, direction);
                 if (partialCheck.valid) {
@@ -636,7 +671,7 @@ app.post('/webhook', async (req, res) => {
                             const s = tradeStats[sym]?.[entryTf];
                             if (s) {
                                 const t = s.trades.find(t => t.id === newTradeId);
-                                if (t) { t.channel = `PARTIAL_${entryTf}`; await saveStats(); }
+                                if (t) { t.channel = `PARTIAL_${entryTf}`; t.alignment = 'PARTIAL'; await saveStats(); broadcastStats(); }
                             }
                             console.log(`  ✅ [PARTIAL ${entryTf}] Alert sent → ${sym}`);
                         }
@@ -655,7 +690,6 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ── ENTRY_FILLED ────────────────────────
         if (action === "ENTRY_FILLED") {
             await recordEntryFilled(sym, entryTf, direction, entry);
             await pushLogEvent(sym, direction, `📥 FILLED: ${type} ${entryTf} @ ${entry}`, Date.now());
@@ -663,7 +697,6 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ── TP_HIT ──────────────────────────────
         if (action === "TP_HIT") {
             await recordResult(sym, entryTf, direction, entry, 'TP_HIT');
             await pushLogEvent(sym, 'BULLISH', `🎯 TP HIT: ${type} ${entryTf} @ ${entry}`, Date.now());
@@ -671,7 +704,6 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ── SL_HIT ──────────────────────────────
         if (action === "SL_HIT") {
             await recordResult(sym, entryTf, direction, entry, 'SL_HIT');
             await pushLogEvent(sym, 'BEARISH', `💀 SL HIT: ${type} ${entryTf} @ ${entry}`, Date.now());
