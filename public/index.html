@@ -215,16 +215,27 @@
             background:linear-gradient(90deg,transparent,#ef4444,#f87171,#ef4444,transparent);
             animation:shimmer 3s ease-in-out infinite;
         }
-        .card-partial {
-            background:linear-gradient(135deg,rgba(60,40,5,0.9) 0%,rgba(100,60,10,0.75) 50%,rgba(20,25,50,0.85) 100%);
-            border:1px solid rgba(245,158,11,0.4);
-            box-shadow:0 0 30px rgba(245,158,11,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(251,191,36,0.15);
-        }
-        .card-partial::after {
-            content:'';position:absolute;top:0;left:0;right:0;height:2px;
-            background:linear-gradient(90deg,transparent,#f59e0b,#fbbf24,#f59e0b,transparent);
-            animation:shimmer 3s ease-in-out infinite;
-        }
+        .card-partial-bull {
+    background:linear-gradient(135deg,rgba(6,55,30,0.88) 0%,rgba(8,95,70,0.62) 50%,rgba(15,30,50,0.82) 100%);
+    border:1px solid rgba(52,211,153,0.35);
+    box-shadow:0 0 26px rgba(52,211,153,0.10),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(110,231,183,0.12);
+}
+.card-partial-bull::after {
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,#34d399,#6ee7b7,#34d399,transparent);
+    animation:shimmer 3s ease-in-out infinite;
+}
+
+.card-partial-bear {
+    background:linear-gradient(135deg,rgba(80,18,18,0.88) 0%,rgba(140,45,45,0.62) 50%,rgba(20,22,50,0.82) 100%);
+    border:1px solid rgba(248,113,113,0.35);
+    box-shadow:0 0 26px rgba(248,113,113,0.10),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(252,165,165,0.12);
+}
+.card-partial-bear::after {
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,#f87171,#fca5a5,#f87171,transparent);
+    animation:shimmer 3s ease-in-out infinite;
+}
         @keyframes shimmer { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
 
         .card-symbol { font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:0.02em;line-height:1; }
@@ -240,12 +251,21 @@
             background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(248,113,113,0.15));
             border:1px solid rgba(248,113,113,0.4);color:#fca5a5;
         }
-        .card-badge-partial {
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-            padding:3px 8px;border-radius:6px;
-            background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(251,191,36,0.15));
-            border:1px solid rgba(251,191,36,0.4);color:#fde68a;
-        }
+    .card-badge-partial-bull {
+    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
+    padding:3px 8px;border-radius:6px;
+    background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(110,231,183,0.12));
+    border:1px solid rgba(110,231,183,0.35);
+    color:#a7f3d0;
+}
+
+.card-badge-partial-bear {
+    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
+    padding:3px 8px;border-radius:6px;
+    background:linear-gradient(135deg,rgba(248,113,113,0.25),rgba(252,165,165,0.12));
+    border:1px solid rgba(252,165,165,0.35);
+    color:#fecaca;
+}
         .card-badge-idle {
             font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
             padding:3px 8px;border-radius:6px;
@@ -277,7 +297,17 @@
             display:flex;align-items:center;gap:8px;
         }
         .align-bar-god { background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399; }
-        .align-bar-partial { background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24; }
+       .align-bar-partial-bull {
+    background:rgba(52,211,153,0.12);
+    border:1px solid rgba(52,211,153,0.28);
+    color:#6ee7b7;
+}
+
+.align-bar-partial-bear {
+    background:rgba(248,113,113,0.12);
+    border:1px solid rgba(248,113,113,0.28);
+    color:#fca5a5;
+}
         .align-bar-none { background:rgba(71,85,105,0.15);border:1px solid rgba(71,85,105,0.3);color:#64748b; }
 
         .feed-panel {
@@ -816,17 +846,38 @@
                     startTxt=dt.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
                 }
 
-                let cardCls,badge;
-                if(mState==='BULLISH'){cardCls='card-bull';badge=`<span class="card-badge-bull">GOD 🐂 5/5</span>`;}
-                else if(mState==='BEARISH'){cardCls='card-bear';badge=`<span class="card-badge-bear">GOD 🐻 5/5</span>`;}
-                else if(pState==='BULLISH'){cardCls='card-partial';badge=`<span class="card-badge-partial">⚡ 🐂 ${alignCnt}/5</span>`;}
-                else if(pState==='BEARISH'){cardCls='card-partial';badge=`<span class="card-badge-partial">⚡ 🐻 ${alignCnt}/5</span>`;}
-                else{cardCls='card-idle';badge=`<span class="card-badge-idle">${alignCnt}/5</span>`;}
+              let cardCls,badge;
+if (mState === 'BULLISH') {
+    cardCls = 'card-bull';
+    badge = `<span class="card-badge-bull">GOD 🐂 5/5</span>`;
+} else if (mState === 'BEARISH') {
+    cardCls = 'card-bear';
+    badge = `<span class="card-badge-bear">GOD 🐻 5/5</span>`;
+} else if (pState === 'BULLISH') {
+    cardCls = 'card-partial-bull';
+    badge = `<span class="card-badge-partial-bull">⚡ 🐂 ${alignCnt}/5</span>`;
+} else if (pState === 'BEARISH') {
+    cardCls = 'card-partial-bear';
+    badge = `<span class="card-badge-partial-bear">⚡ 🐻 ${alignCnt}/5</span>`;
+} else {
+    cardCls = 'card-idle';
+    badge = `<span class="card-badge-idle">${alignCnt}/5</span>`;
+}
 
-                let alignBarCls,alignBarTxt;
-                if(mState!=='NONE'){alignBarCls='align-bar-god';alignBarTxt=`✅ GOD-MODE: ${mState} (5/5)`;}
-                else if(pState!=='NONE'){alignBarCls='align-bar-partial';alignBarTxt=`⚡ PARTIAL: ${pState} (${alignCnt}/5)`;}
-                else{alignBarCls='align-bar-none';alignBarTxt=`— ${alignCnt}/5 aligned`;}
+let alignBarCls,alignBarTxt;
+if (mState !== 'NONE') {
+    alignBarCls = 'align-bar-god';
+    alignBarTxt = `✅ GOD-MODE: ${mState} (5/5)`;
+} else if (pState === 'BULLISH') {
+    alignBarCls = 'align-bar-partial-bull';
+    alignBarTxt = `⚡ PARTIAL: BULLISH (${alignCnt}/5)`;
+} else if (pState === 'BEARISH') {
+    alignBarCls = 'align-bar-partial-bear';
+    alignBarTxt = `⚡ PARTIAL: BEARISH (${alignCnt}/5)`;
+} else {
+    alignBarCls = 'align-bar-none';
+    alignBarTxt = `— ${alignCnt}/5 aligned`;
+}
 
                 // Build 5 TF cells
                 let tfCells = '';
