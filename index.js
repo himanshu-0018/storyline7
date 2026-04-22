@@ -50,8 +50,57 @@ function broadcastStats() {
 }
 
 // ══════════════════════════════════════════════
-// TELEGRAM
+// TELEGRAM — TRACKED SEND + DELETE
 // ══════════════════════════════════════════════
+async function sendTelegramTracked(chatId, message) {
+    if (!TELEGRAM_TOKEN || !chatId) return { ok: false, messageId: null };
+
+    try {
+        const resp = await fetch(
+            `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
+            {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" })
+            }
+        );
+
+        if (!resp.ok) return { ok: false, messageId: null };
+
+        const data = await resp.json();
+        return {
+            ok: true,
+            messageId: data?.result?.message_id || null
+        };
+    } catch (err) {
+        console.error("Telegram Send Error:", err);
+        return { ok: false, messageId: null };
+    }
+}
+
+async function deleteTelegramMessage(chatId, messageId) {
+    if (!TELEGRAM_TOKEN || !chatId || !messageId) return false;
+
+    try {
+        const resp = await fetch(
+            `https://api.telegram.org/bot${TELEGRAM_TOKEN}/deleteMessage`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    message_id: messageId
+                })
+            }
+        );
+        return resp.ok;
+    } catch (err) {
+        console.error("Telegram Delete Error:", err);
+        return false;
+    }
+}
+
+// For storyline alerts (no tracking needed)
 async function sendTelegram(chatId, message) {
     if (!TELEGRAM_TOKEN || !chatId) return false;
     try {
@@ -119,6 +168,9 @@ function getLiveCounts(stats) {
     let partial_tp=0, partial_sl=0, partial_signals=0;
 
     for (const t of stats.trades) {
+        // ✅ Skip cancelled trades in all counts
+        if (t.status === 'CANCELLED') continue;
+
         const align = t.alignment || 'NONE';
         if (t.status === 'SIGNAL')  pending++;
         if (t.status === 'ACTIVE')  { active++;  entries++; }
@@ -249,6 +301,17 @@ function recalculateAlignment(symbol) {
     return { dominantState, bullCount, bearCount, alignCount: Math.max(bullCount, bearCount), partialState, partialCount };
 }
 
+// ── Direction-specific align count ──
+function getDirectionAlignCount(symbol, direction) {
+    if (!marketState[symbol]) return 0;
+    const tfs = marketState[symbol].timeframes || {};
+    let count = 0;
+    ZONE_TIMEFRAMES.forEach(tf => {
+        if (tfs[tf] === direction) count++;
+    });
+    return count;
+}
+
 // ── GOD MODE: 5/5 aligned and direction matches ──
 function validateGodMode(symbol, direction) {
     if (!marketState[symbol]) return { valid: false, reason: "Not tracked" };
@@ -261,7 +324,6 @@ function validateGodMode(symbol, direction) {
 // ── PARTIAL: 4/5 aligned and direction matches ──
 function validatePartial(symbol, direction) {
     if (!marketState[symbol]) return { valid: false, reason: "Not tracked" };
-    // Must NOT be already god mode (god mode takes priority)
     if (marketState[symbol].lastAlertedState === direction) return { valid: false, reason: "Already God-Mode" };
     const tfs = marketState[symbol].timeframes || {};
     let count = 0;
@@ -280,15 +342,65 @@ function getAlignmentType(symbol, direction) {
 }
 
 // ══════════════════════════════════════════════
+// CANCEL PENDING TRADES ON ALIGNMENT DROP
+// ══════════════════════════════════════════════
+async function invalidatePendingTrades(symbol) {
+    const stats = tradeStats[symbol]?.[ENTRY_TF];
+    if (!stats || !stats.trades || stats.trades.length === 0) return 0;
+
+    let cancelledCount = 0;
+
+    for (const trade of stats.trades) {
+        // Only cancel pre-entry trades
+        if (trade.status !== 'SIGNAL') continue;
+
+        const count = getDirectionAlignCount(symbol, trade.direction);
+        if (count < PARTIAL_THRESHOLD) {
+            trade.status = 'CANCELLED';
+            trade.cancelled_time = Date.now();
+            trade.cancelled_reason = `Alignment dropped to ${count}/5`;
+
+            // Decrement signal count
+            if (stats.total_signals > 0) stats.total_signals--;
+
+            // Try to delete the Telegram message
+            let deleted = false;
+            if (trade.telegram_chat_id && trade.telegram_message_id) {
+                deleted = await deleteTelegramMessage(trade.telegram_chat_id, trade.telegram_message_id);
+                trade.telegram_deleted = deleted;
+            }
+
+            await pushLogEvent(
+                symbol,
+                'NONE',
+                `❌ CANCELLED: ${trade.direction} ${ENTRY_TF} @ ${trade.entry} (${trade.cancelled_reason})${trade.telegram_message_id ? (deleted ? ' | TG deleted ✅' : ' | TG delete failed ❌') : ''}`,
+                Date.now()
+            );
+
+            console.log(`[CANCELLED] ${symbol} ${ENTRY_TF} ${trade.direction} @ ${trade.entry} | ${trade.cancelled_reason} | TG deleted: ${deleted}`);
+            cancelledCount++;
+        }
+    }
+
+    if (cancelledCount > 0) {
+        await saveStats();
+        broadcastStats();
+    }
+
+    return cancelledCount;
+}
+
+// ══════════════════════════════════════════════
 // RECORD FUNCTIONS — Only called AFTER alignment confirmed
 // ══════════════════════════════════════════════
 
-async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, touchedLevel, alignmentType) {
+async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, touchedLevel, alignmentType, tradeType) {
     const stats = ensureStats(symbol, tf);
     stats.total_signals++;
 
     const trade = {
         id:            makeTradeId(symbol, tf),
+        trade_type:    tradeType || '',
         direction,
         entry:         parseFloat(entry)  || entry,
         sl:            parseFloat(sl)     || sl,
@@ -300,7 +412,16 @@ async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, touchedLev
         status:        'SIGNAL',
         signal_time:   Date.now(),
         entry_time:    null,
-        result_time:   null
+        result_time:   null,
+
+        // Telegram tracking for cancellation
+        telegram_chat_id:    null,
+        telegram_message_id: null,
+        telegram_deleted:    false,
+
+        // Cancellation tracking
+        cancelled_time:   null,
+        cancelled_reason: null
     };
     stats.trades.push(trade);
     if (stats.trades.length > 500) stats.trades = stats.trades.slice(-500);
@@ -312,11 +433,10 @@ async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, touchedLev
 }
 
 async function recordEntryFilled(symbol, tf, direction, entry) {
-    // ── Only process if we actually have a signal recorded for this trade ──
     const stats = tradeStats[symbol]?.[tf];
     if (!stats) {
         console.log(`  [STATS] ENTRY_FILLED skipped — no stats for ${symbol} ${tf} (not aligned signal)`);
-        return;
+        return false;
     }
 
     const found = findBestTrade(stats, {
@@ -329,17 +449,18 @@ async function recordEntryFilled(symbol, tf, direction, entry) {
         console.log(`  [STATS] Entry filled: ID=${found.trade.id} | ${symbol} ${tf} ${direction} @ ${entry}`);
         await saveStats();
         broadcastStats();
+        return true;
     } else {
-        console.log(`  [STATS] ENTRY_FILLED — no matching SIGNAL found for ${symbol} ${tf} ${direction} @ ${entry} (skipped)`);
+        console.log(`  [STATS] ENTRY_FILLED — no matching SIGNAL found for ${symbol} ${tf} ${direction} @ ${entry} (skipped — may be cancelled)`);
+        return false;
     }
 }
 
 async function recordResult(symbol, tf, direction, entry, action) {
-    // ── Only process if we have stats for this symbol/tf ──
     const stats = tradeStats[symbol]?.[tf];
     if (!stats) {
         console.log(`  [STATS] ${action} skipped — no stats for ${symbol} ${tf} (not aligned signal)`);
-        return;
+        return false;
     }
 
     const found = findBestTrade(stats, {
@@ -354,8 +475,10 @@ async function recordResult(symbol, tf, direction, entry, action) {
         console.log(`  [STATS] ${action}: ID=${found.trade.id} | ${symbol} ${tf} ${direction} @ ${entry}`);
         await saveStats();
         broadcastStats();
+        return true;
     } else {
-        console.log(`  [STATS] ${action} — no matching ACTIVE trade for ${symbol} ${tf} ${direction} @ ${entry} (skipped)`);
+        console.log(`  [STATS] ${action} — no matching trade for ${symbol} ${tf} ${direction} @ ${entry} (skipped — may be cancelled)`);
+        return false;
     }
 }
 
@@ -396,7 +519,6 @@ if (savedState) {
     marketState = JSON.parse(savedState);
     console.log(`💾 Restored ${Object.keys(marketState).length} symbols`);
     for (const sym in marketState) {
-        // Ensure all 5 TFs exist
         if (!marketState[sym].timeframes) marketState[sym].timeframes = {};
         ZONE_TIMEFRAMES.forEach(tf => {
             if (!marketState[sym].timeframes[tf]) marketState[sym].timeframes[tf] = "NONE";
@@ -577,6 +699,12 @@ app.post('/webhook', async (req, res) => {
         }
         marketState[sym]._lastPartialState = partialState;
 
+        // ✅ CANCEL any pending trades that lost alignment
+        const cancelledCount = await invalidatePendingTrades(sym);
+        if (cancelledCount > 0) {
+            console.log(`[INVALIDATION] ${sym} → Cancelled ${cancelledCount} pending trade(s) due to lost alignment`);
+        }
+
         await redisClient.set(REDIS_STATE_KEY, JSON.stringify(marketState));
         broadcastAll();
         return res.status(200).send("OK");
@@ -618,21 +746,19 @@ app.post('/webhook', async (req, res) => {
             const alignResult = getAlignmentType(sym, direction);
 
             if (!alignResult.valid) {
-                // ❌ No alignment in signal direction → ignore completely
                 console.log(`  ❌ REJECTED: ${sym} ${direction} | Reason: ${alignResult.reason}`);
                 return res.status(200).send("OK — No alignment, skipped");
             }
 
-            // ✅ Aligned — alignResult.type is 'GOD' or 'PARTIAL'
             console.log(`  ✅ ALIGNED [${alignResult.type}] ${sym} ${direction} (${alignResult.alignCount}/5)`);
 
-            // ── Step 2: Record to stats (only aligned entries) ───────────
+            // ── Step 2: Record to stats ──────────────────────────────────
             const newTradeId = await recordSignal(
                 sym, ENTRY_TF, direction, entry, sl, tp, rr, touchedLevel,
-                alignResult.type  // 'GOD' | 'PARTIAL'
+                alignResult.type, type
             );
 
-            // ── Step 3: Send to correct Telegram channel ─────────────────
+            // ── Step 3: Send to Telegram (tracked for cancellation) ─────
             const tfsInfo = tfInfoString(sym);
             let soundTriggered = false;
 
@@ -649,16 +775,21 @@ app.post('/webhook', async (req, res) => {
                     if (touchedLevel) msg += `<b>Level:</b> ${touchedLevel}\n`;
                     msg += `\n✅ <b>GOD-MODE (5/5)</b>\n${tfsInfo}`;
 
-                    const sent = await sendTelegram(TG_5M_GOD, msg);
-                    if (sent) {
+                    const sent = await sendTelegramTracked(TG_5M_GOD, msg);
+                    if (sent.ok) {
                         soundTriggered = true;
-                        // Tag channel on trade
                         const s = tradeStats[sym]?.[ENTRY_TF];
                         if (s) {
                             const t = s.trades.find(t => t.id === newTradeId);
-                            if (t) { t.channel = 'GOD_5M'; await saveStats(); broadcastStats(); }
+                            if (t) {
+                                t.channel = 'GOD_5M';
+                                t.telegram_chat_id = TG_5M_GOD;
+                                t.telegram_message_id = sent.messageId;
+                                await saveStats();
+                                broadcastStats();
+                            }
                         }
-                        console.log(`  ✅ [GOD 5M] Telegram sent → ${sym}`);
+                        console.log(`  ✅ [GOD 5M] Telegram sent → ${sym} | msg_id=${sent.messageId}`);
                     }
                 }
             } else {
@@ -675,15 +806,21 @@ app.post('/webhook', async (req, res) => {
                     if (touchedLevel) msg += `<b>Level:</b> ${touchedLevel}\n`;
                     msg += `\n⚡ <b>PARTIAL (${alignResult.alignCount}/5)</b>\n${tfsInfo}`;
 
-                    const sent = await sendTelegram(TG_5M_PARTIAL, msg);
-                    if (sent) {
+                    const sent = await sendTelegramTracked(TG_5M_PARTIAL, msg);
+                    if (sent.ok) {
                         soundTriggered = true;
                         const s = tradeStats[sym]?.[ENTRY_TF];
                         if (s) {
                             const t = s.trades.find(t => t.id === newTradeId);
-                            if (t) { t.channel = 'PARTIAL_5M'; await saveStats(); broadcastStats(); }
+                            if (t) {
+                                t.channel = 'PARTIAL_5M';
+                                t.telegram_chat_id = TG_5M_PARTIAL;
+                                t.telegram_message_id = sent.messageId;
+                                await saveStats();
+                                broadcastStats();
+                            }
                         }
-                        console.log(`  ✅ [PARTIAL 5M] Telegram sent → ${sym}`);
+                        console.log(`  ✅ [PARTIAL 5M] Telegram sent → ${sym} | msg_id=${sent.messageId}`);
                     }
                 }
             }
@@ -703,9 +840,11 @@ app.post('/webhook', async (req, res) => {
         // ENTRY_FILLED — only update existing aligned trades
         // ══════════════════════════════════════
         if (action === "ENTRY_FILLED") {
-            await recordEntryFilled(sym, ENTRY_TF, direction, entry);
-            await pushLogEvent(sym, direction, `📥 FILLED: ${type} ${ENTRY_TF} @ ${entry}`, Date.now());
-            broadcastAll();
+            const updated = await recordEntryFilled(sym, ENTRY_TF, direction, entry);
+            if (updated) {
+                await pushLogEvent(sym, direction, `📥 FILLED: ${type} ${ENTRY_TF} @ ${entry}`, Date.now());
+                broadcastAll();
+            }
             return res.status(200).send("OK");
         }
 
@@ -713,9 +852,11 @@ app.post('/webhook', async (req, res) => {
         // TP_HIT — only update existing aligned trades
         // ══════════════════════════════════════
         if (action === "TP_HIT") {
-            await recordResult(sym, ENTRY_TF, direction, entry, 'TP_HIT');
-            await pushLogEvent(sym, 'BULLISH', `🎯 TP HIT: ${type} ${ENTRY_TF} @ ${entry}`, Date.now());
-            broadcastAll();
+            const updated = await recordResult(sym, ENTRY_TF, direction, entry, 'TP_HIT');
+            if (updated) {
+                await pushLogEvent(sym, 'BULLISH', `🎯 TP HIT: ${type} ${ENTRY_TF} @ ${entry}`, Date.now());
+                broadcastAll();
+            }
             return res.status(200).send("OK");
         }
 
@@ -723,9 +864,11 @@ app.post('/webhook', async (req, res) => {
         // SL_HIT — only update existing aligned trades
         // ══════════════════════════════════════
         if (action === "SL_HIT") {
-            await recordResult(sym, ENTRY_TF, direction, entry, 'SL_HIT');
-            await pushLogEvent(sym, 'BEARISH', `💀 SL HIT: ${type} ${ENTRY_TF} @ ${entry}`, Date.now());
-            broadcastAll();
+            const updated = await recordResult(sym, ENTRY_TF, direction, entry, 'SL_HIT');
+            if (updated) {
+                await pushLogEvent(sym, 'BEARISH', `💀 SL HIT: ${type} ${ENTRY_TF} @ ${entry}`, Date.now());
+                broadcastAll();
+            }
             return res.status(200).send("OK");
         }
 
