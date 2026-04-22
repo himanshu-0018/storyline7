@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>God-Mode Command Center v3</title>
+    <title>God-Mode Command Center v4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
@@ -176,7 +176,7 @@
         .coin-section { flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(99,102,241,0.3) transparent; }
         .coin-section::-webkit-scrollbar { width:4px; }
         .coin-section::-webkit-scrollbar-thumb { background:rgba(99,102,241,0.3);border-radius:4px; }
-        .coin-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px; }
+        .coin-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px; }
 
         .coin-card {
             border-radius:16px;padding:16px;position:relative;overflow:hidden;
@@ -255,10 +255,12 @@
             font-family:'JetBrains Mono',monospace;font-size:0.52rem;
             color:rgba(148,163,184,0.5);letter-spacing:0.06em;margin-top:4px;
         }
-        .tf-row { display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px; }
+
+        /* 5-column TF row */
+        .tf-row { display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:10px; }
         .tf-cell {
-            padding:8px 8px;border-radius:10px;
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;
+            padding:7px 4px;border-radius:9px;
+            font-family:'JetBrains Mono',monospace;font-size:0.50rem;
         }
         .tf-cell-bull {
             background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));
@@ -382,14 +384,12 @@
 
         /* ── INJECT TF ROW ── */
         .inject-tf-block {
-            padding:14px;border-radius:12px;margin-bottom:12px;
+            padding:12px 14px;border-radius:12px;margin-bottom:10px;
             background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);
-        }
-        .inject-tf-header {
-            display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;
+            display:flex;align-items:center;justify-content:space-between;
         }
         .inject-tf-title {
-            font-family:'Orbitron',sans-serif;font-size:0.75rem;font-weight:700;
+            font-family:'Orbitron',sans-serif;font-size:0.72rem;font-weight:700;
             color:#a5b4fc;letter-spacing:0.08em;
         }
         .inject-state-select {
@@ -399,11 +399,6 @@
             cursor:pointer;outline:none;transition:all 0.2s;
         }
         .inject-state-select:focus { border-color:rgba(99,102,241,0.6);box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
-        .inject-tf-fields {
-            display:grid;grid-template-columns:1fr 1fr;gap:8px;
-        }
-        .inject-tf-fields .field-input { margin-bottom:0;font-size:0.75rem;padding:8px 12px; }
-        .inject-tf-fields .field-label { margin-bottom:3px;font-size:0.5rem; }
 
         /* Quick-fill buttons */
         .quick-fill-row {
@@ -475,7 +470,7 @@
                 animation:logoGlow 4s ease-in-out infinite;">⚡</div>
             <div>
                 <div class="brand-name">GOD-MODE TERMINAL</div>
-                <div class="brand-sub">LIVE ALIGNMENT ENGINE · v3 · 1H + 30M + 15M</div>
+                <div class="brand-sub">LIVE ALIGNMENT ENGINE · v4 · 1D+4H+1H+30M+15M · 5/5=GOD · 4/5=PARTIAL · 5M ENTRIES</div>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -529,12 +524,12 @@
     </div>
 
     <!-- ═══════════════════════════════════════ -->
-    <!-- INJECT MODAL — ALL 3 TFs AT ONCE       -->
+    <!-- INJECT MODAL — ALL 5 TFs AT ONCE       -->
     <!-- ═══════════════════════════════════════ -->
     <div class="modal-backdrop" id="modal">
         <div class="modal-box" style="max-width:540px;">
             <div class="modal-title">⚡ Multi-TF Inject</div>
-            <div class="modal-sub">Set all 3 timeframes for a coin in one shot.</div>
+            <div class="modal-sub">Set all 5 timeframes for a coin in one shot.</div>
 
             <!-- Symbol -->
             <label class="field-label">Symbol</label>
@@ -548,71 +543,8 @@
                 <button class="quick-btn quick-btn-none" onclick="quickFillAll('NONE')">— ALL NONE</button>
             </div>
 
-            <!-- 1H Block -->
-            <div class="inject-tf-block">
-                <div class="inject-tf-header">
-                    <span class="inject-tf-title">1H — 1 HOUR</span>
-                    <select id="inj1hState" class="inject-state-select">
-                        <option value="NONE">⚪ NONE</option>
-                        <option value="BULLISH">🟢 BULLISH</option>
-                        <option value="BEARISH">🔴 BEARISH</option>
-                    </select>
-                </div>
-                <div class="inject-tf-fields">
-                    <div>
-                        <label class="field-label">BO Price</label>
-                        <input type="number" id="inj1hBo" step="any" class="field-input" placeholder="optional">
-                    </div>
-                    <div>
-                        <label class="field-label">SL Price</label>
-                        <input type="number" id="inj1hSl" step="any" class="field-input" placeholder="optional">
-                    </div>
-                </div>
-            </div>
-
-            <!-- 30M Block -->
-            <div class="inject-tf-block">
-                <div class="inject-tf-header">
-                    <span class="inject-tf-title">30M — 30 MIN</span>
-                    <select id="inj30mState" class="inject-state-select">
-                        <option value="NONE">⚪ NONE</option>
-                        <option value="BULLISH">🟢 BULLISH</option>
-                        <option value="BEARISH">🔴 BEARISH</option>
-                    </select>
-                </div>
-                <div class="inject-tf-fields">
-                    <div>
-                        <label class="field-label">BO Price</label>
-                        <input type="number" id="inj30mBo" step="any" class="field-input" placeholder="optional">
-                    </div>
-                    <div>
-                        <label class="field-label">SL Price</label>
-                        <input type="number" id="inj30mSl" step="any" class="field-input" placeholder="optional">
-                    </div>
-                </div>
-            </div>
-
-            <!-- 15M Block -->
-            <div class="inject-tf-block">
-                <div class="inject-tf-header">
-                    <span class="inject-tf-title">15M — 15 MIN</span>
-                    <select id="inj15mState" class="inject-state-select">
-                        <option value="NONE">⚪ NONE</option>
-                        <option value="BULLISH">🟢 BULLISH</option>
-                        <option value="BEARISH">🔴 BEARISH</option>
-                    </select>
-                </div>
-                <div class="inject-tf-fields">
-                    <div>
-                        <label class="field-label">BO Price</label>
-                        <input type="number" id="inj15mBo" step="any" class="field-input" placeholder="optional">
-                    </div>
-                    <div>
-                        <label class="field-label">SL Price</label>
-                        <input type="number" id="inj15mSl" step="any" class="field-input" placeholder="optional">
-                    </div>
-                </div>
-            </div>
+            <!-- TF Blocks - built dynamically -->
+            <div id="tfBlocks"></div>
 
             <!-- Progress -->
             <div class="inject-progress" id="injProgress"></div>
@@ -641,6 +573,21 @@
     </div>
 
     <script>
+        // ══════════════════════════════════
+        // CONSTANTS
+        // ══════════════════════════════════
+        const ALL_TFS = ['1D', '4H', '1H', '30M', '15M'];
+        const TF_LABELS = {
+            '1D':  '1D — DAILY',
+            '4H':  '4H — 4 HOUR',
+            '1H':  '1H — 1 HOUR',
+            '30M': '30M — 30 MIN',
+            '15M': '15M — 15 MIN'
+        };
+
+        // ══════════════════════════════════
+        // AUDIO
+        // ══════════════════════════════════
         const moneySound = new Audio('/money.mp3');
         moneySound.volume = 0.85;
         let audioOn = false;
@@ -657,6 +604,9 @@
             moneySound.currentTime=0; moneySound.play().catch(()=>{});
         }
 
+        // ══════════════════════════════════
+        // COPY TO CLIPBOARD
+        // ══════════════════════════════════
         window.copyValue = (val,e) => {
             if (!val||val==='---'||val==='N/A') return;
             navigator.clipboard.writeText(val);
@@ -669,23 +619,43 @@
         };
 
         // ══════════════════════════════════
+        // BUILD INJECT TF BLOCKS DYNAMICALLY
+        // ══════════════════════════════════
+        (function buildTfBlocks() {
+            const container = document.getElementById('tfBlocks');
+            container.innerHTML = ALL_TFS.map(tf => `
+                <div class="inject-tf-block">
+                    <span class="inject-tf-title">${TF_LABELS[tf]}</span>
+                    <select id="inj${tf.replace('M','m')}State" class="inject-state-select">
+                        <option value="NONE">⚪ NONE</option>
+                        <option value="BULLISH">🟢 BULLISH</option>
+                        <option value="BEARISH">🔴 BEARISH</option>
+                    </select>
+                </div>
+            `).join('');
+        })();
+
+        // ══════════════════════════════════
         // INJECT MODAL — MULTI-TF
         // ══════════════════════════════════
         const openModal = () => { document.getElementById('modal').style.display='flex'; };
         const closeModal = () => {
             document.getElementById('modal').style.display='none';
             document.getElementById('injSymbol').value='';
-            ['inj1hState','inj30mState','inj15mState'].forEach(id => document.getElementById(id).value='NONE');
-            ['inj1hBo','inj1hSl','inj30mBo','inj30mSl','inj15mBo','inj15mSl'].forEach(id => document.getElementById(id).value='');
+            ALL_TFS.forEach(tf => {
+                const el = document.getElementById('inj' + tf.replace('M','m') + 'State');
+                if (el) el.value = 'NONE';
+            });
             const prog = document.getElementById('injProgress');
             prog.innerHTML=''; prog.classList.remove('active');
         };
         document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 
         function quickFillAll(state) {
-            document.getElementById('inj1hState').value  = state;
-            document.getElementById('inj30mState').value = state;
-            document.getElementById('inj15mState').value = state;
+            ALL_TFS.forEach(tf => {
+                const el = document.getElementById('inj' + tf.replace('M','m') + 'State');
+                if (el) el.value = state;
+            });
         }
 
         async function doInject() {
@@ -695,28 +665,11 @@
 
             if (!sym) return alert('Please enter a symbol.');
 
-            const tfs = [
-                {
-                    tf: '1H',
-                    state: document.getElementById('inj1hState').value,
-                    bo: document.getElementById('inj1hBo').value,
-                    sl: document.getElementById('inj1hSl').value
-                },
-                {
-                    tf: '30M',
-                    state: document.getElementById('inj30mState').value,
-                    bo: document.getElementById('inj30mBo').value,
-                    sl: document.getElementById('inj30mSl').value
-                },
-                {
-                    tf: '15M',
-                    state: document.getElementById('inj15mState').value,
-                    bo: document.getElementById('inj15mBo').value,
-                    sl: document.getElementById('inj15mSl').value
-                }
-            ];
+            const tfs = ALL_TFS.map(tf => ({
+                tf: tf,
+                state: document.getElementById('inj' + tf.replace('M','m') + 'State')?.value || 'NONE'
+            }));
 
-            // Filter — only send TFs that have a state set (not NONE, or user explicitly set NONE)
             const toSend = tfs.filter(t => t.state);
             if (toSend.length === 0) return alert('Set at least one timeframe state.');
 
@@ -730,8 +683,6 @@
 
             for (const t of toSend) {
                 const payload = { symbol: sym, tf: t.tf, state: t.state };
-                if (t.bo && !isNaN(t.bo)) payload.bo = parseFloat(t.bo);
-                if (t.sl && !isNaN(t.sl)) payload.sl = parseFloat(t.sl);
 
                 try {
                     const r = await fetch('/webhook', {
@@ -751,7 +702,6 @@
                     prog.innerHTML += `<span class="fail">❌ ${t.tf} error</span><br>`;
                 }
 
-                // Small delay between calls to let server process sequentially
                 await new Promise(r => setTimeout(r, 200));
             }
 
@@ -828,8 +778,8 @@
             grid.innerHTML='';
 
             const syms=Object.keys(ms).sort((a,b)=>{
-                const sa=ms[a].lastAlertedState!=='NONE'?2:(ms[a].partialState!=='NONE'?1:0);
-                const sb=ms[b].lastAlertedState!=='NONE'?2:(ms[b].partialState!=='NONE'?1:0);
+                const sa=ms[a].lastAlertedState!=='NONE'?3:((ms[a].partialState||'NONE')!=='NONE'?2:((ms[a].alignCount||0)>=1?1:0));
+                const sb=ms[b].lastAlertedState!=='NONE'?3:((ms[b].partialState||'NONE')!=='NONE'?2:((ms[b].alignCount||0)>=1?1:0));
                 if(sa!==sb) return sb-sa;
                 return a.localeCompare(b);
             });
@@ -838,7 +788,7 @@
             const gods=syms.filter(s=>ms[s].lastAlertedState!=='NONE');
             const godBulls=gods.filter(s=>ms[s].lastAlertedState==='BULLISH').length;
             const godBears=gods.filter(s=>ms[s].lastAlertedState==='BEARISH').length;
-            const partials=syms.filter(s=>ms[s].lastAlertedState==='NONE'&&ms[s].partialState!=='NONE').length;
+            const partials=syms.filter(s=>ms[s].lastAlertedState==='NONE'&&(ms[s].partialState||'NONE')!=='NONE').length;
             const idles=total-gods.length-partials;
 
             document.getElementById('godCounter').textContent=`${gods.length}/${total}`;
@@ -867,16 +817,30 @@
                 }
 
                 let cardCls,badge;
-                if(mState==='BULLISH'){cardCls='card-bull';badge=`<span class="card-badge-bull">GOD 🐂 3/3</span>`;}
-                else if(mState==='BEARISH'){cardCls='card-bear';badge=`<span class="card-badge-bear">GOD 🐻 3/3</span>`;}
-                else if(pState==='BULLISH'){cardCls='card-partial';badge=`<span class="card-badge-partial">⚡ 🐂 ${alignCnt}/3</span>`;}
-                else if(pState==='BEARISH'){cardCls='card-partial';badge=`<span class="card-badge-partial">⚡ 🐻 ${alignCnt}/3</span>`;}
-                else{cardCls='card-idle';badge=`<span class="card-badge-idle">IDLE</span>`;}
+                if(mState==='BULLISH'){cardCls='card-bull';badge=`<span class="card-badge-bull">GOD 🐂 5/5</span>`;}
+                else if(mState==='BEARISH'){cardCls='card-bear';badge=`<span class="card-badge-bear">GOD 🐻 5/5</span>`;}
+                else if(pState==='BULLISH'){cardCls='card-partial';badge=`<span class="card-badge-partial">⚡ 🐂 ${alignCnt}/5</span>`;}
+                else if(pState==='BEARISH'){cardCls='card-partial';badge=`<span class="card-badge-partial">⚡ 🐻 ${alignCnt}/5</span>`;}
+                else{cardCls='card-idle';badge=`<span class="card-badge-idle">${alignCnt}/5</span>`;}
 
                 let alignBarCls,alignBarTxt;
-                if(mState!=='NONE'){alignBarCls='align-bar-god';alignBarTxt=`✅ GOD-MODE: ${mState} (3/3)`;}
-                else if(pState!=='NONE'){alignBarCls='align-bar-partial';alignBarTxt=`⚡ PARTIAL: ${pState} (${alignCnt}/3)`;}
-                else{alignBarCls='align-bar-none';alignBarTxt=`— No alignment (${alignCnt}/3)`;}
+                if(mState!=='NONE'){alignBarCls='align-bar-god';alignBarTxt=`✅ GOD-MODE: ${mState} (5/5)`;}
+                else if(pState!=='NONE'){alignBarCls='align-bar-partial';alignBarTxt=`⚡ PARTIAL: ${pState} (${alignCnt}/5)`;}
+                else{alignBarCls='align-bar-none';alignBarTxt=`— ${alignCnt}/5 aligned`;}
+
+                // Build 5 TF cells
+                let tfCells = '';
+                ALL_TFS.forEach(tf => {
+                    tfCells += `
+                        <div class="tf-cell ${tfCls(tfs[tf])}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                                <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
+                                <span style="font-size:0.65rem;">${tfEmo(tfs[tf])}</span>
+                            </div>
+                            <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${tfs[tf]||'NONE'}</div>
+                        </div>
+                    `;
+                });
 
                 grid.insertAdjacentHTML('beforeend',`
                     <div class="coin-card ${cardCls}">
@@ -888,27 +852,7 @@
                             ${badge}
                         </div>
                         <div class="tf-row">
-                            <div class="tf-cell ${tfCls(tfs['1H'])}">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                                    <span style="color:rgba(203,213,225,0.5);font-size:0.5rem;text-transform:uppercase;letter-spacing:.06em;">1H</span>
-                                    <span style="font-size:0.75rem;">${tfEmo(tfs['1H'])}</span>
-                                </div>
-                                <div style="color:rgba(203,213,225,0.6);font-size:0.5rem;">${tfs['1H']||'NONE'}</div>
-                            </div>
-                            <div class="tf-cell ${tfCls(tfs['30M'])}">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                                    <span style="color:rgba(203,213,225,0.5);font-size:0.5rem;text-transform:uppercase;letter-spacing:.06em;">30M</span>
-                                    <span style="font-size:0.75rem;">${tfEmo(tfs['30M'])}</span>
-                                </div>
-                                <div style="color:rgba(203,213,225,0.6);font-size:0.5rem;">${tfs['30M']||'NONE'}</div>
-                            </div>
-                            <div class="tf-cell ${tfCls(tfs['15M'])}">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                                    <span style="color:rgba(203,213,225,0.5);font-size:0.5rem;text-transform:uppercase;letter-spacing:.06em;">15M</span>
-                                    <span style="font-size:0.75rem;">${tfEmo(tfs['15M'])}</span>
-                                </div>
-                                <div style="color:rgba(203,213,225,0.6);font-size:0.5rem;">${tfs['15M']||'NONE'}</div>
-                            </div>
+                            ${tfCells}
                         </div>
                         <div class="align-bar ${alignBarCls}">${alignBarTxt}</div>
                     </div>
