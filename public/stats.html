@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Statistics — God-Mode v4</title>
+    <title>Trade Statistics — God-Mode v5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
@@ -119,7 +119,7 @@
         .filter-btn:not([class*="active"]):hover { border-color:rgba(100,116,139,0.6);color:#94a3b8; }
         .filter-divider { width:1px;height:24px;background:rgba(255,255,255,0.08); }
 
-        .coin-stats-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px; }
+        .coin-stats-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:16px; }
         .coin-stats-card { border-radius:16px;padding:18px;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(10px);position:relative;overflow:hidden; }
         .coin-stats-card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(245,158,11,0.5),rgba(251,191,36,0.5),transparent); }
         .csc-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:10px; }
@@ -161,6 +161,7 @@
         .align-tag-god { background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.3); }
         .align-tag-partial { background:rgba(245,158,11,0.2);color:#fbbf24;border:1px solid rgba(245,158,11,0.3); }
         .align-tag-none { background:rgba(71,85,105,0.2);color:#64748b;border:1px solid rgba(71,85,105,0.3); }
+        .tf-tag { font-size:0.42rem;font-weight:700;padding:2px 5px;border-radius:4px;letter-spacing:0.06em;white-space:nowrap;background:rgba(14,165,233,0.15);color:#38bdf8;border:1px solid rgba(14,165,233,0.3); }
 
         .empty-stats { font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:rgba(148,163,184,0.3);text-align:center;padding:60px 20px;grid-column:1/-1; }
 
@@ -197,7 +198,7 @@
                 display:flex;align-items:center;justify-content:center;font-size:1.3rem;">📊</div>
             <div>
                 <div class="brand-name">TRADE STATISTICS</div>
-                <div class="brand-sub">ENTRY / TP / SL · PER COIN · 5M · GOD (5/5) vs PARTIAL (4/5)</div>
+                <div class="brand-sub">ENTRY / TP / SL · PER COIN · 1M / 3M / 5M · GOD (5/5) vs PARTIAL (4/5)</div>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -240,6 +241,14 @@
 
         <div class="filter-section">
             <div class="filter-group">
+                <span class="filter-group-label">TF:</span>
+                <button class="filter-btn active-tf" id="tf-ALL" onclick="setTfFilter('ALL',this)">ALL</button>
+                <button class="filter-btn" id="tf-1M" onclick="setTfFilter('1M',this)">1M</button>
+                <button class="filter-btn" id="tf-3M" onclick="setTfFilter('3M',this)">3M</button>
+                <button class="filter-btn" id="tf-5M" onclick="setTfFilter('5M',this)">5M</button>
+            </div>
+            <div class="filter-divider"></div>
+            <div class="filter-group">
                 <span class="filter-group-label">ALIGN:</span>
                 <button class="filter-btn active-align-all" id="al-ALL" onclick="setAlignFilter('ALL',this)">ALL</button>
                 <button class="filter-btn" id="al-GOD" onclick="setAlignFilter('GOD',this)">✅ GOD (5/5)</button>
@@ -269,6 +278,8 @@
     <script>
         let currentStats = {};
         let currentAlign = 'ALL';
+        let currentTfFilter = 'ALL';
+        const ENTRY_TFS = ['1M', '3M', '5M'];
 
         const openClearModal  = () => document.getElementById('clearModal').style.display='flex';
         const closeClearModal = () => { document.getElementById('clearModal').style.display='none'; document.getElementById('clearSymbol').value=''; };
@@ -293,6 +304,13 @@
             renderStats();
         }
 
+        function setTfFilter(tf, btn) {
+            currentTfFilter = tf;
+            document.querySelectorAll('[id^="tf-"]').forEach(b => b.className = 'filter-btn');
+            btn.className = 'filter-btn active-tf';
+            renderStats();
+        }
+
         function fmtTime(ts) {
             if (!ts) return '—';
             const d = new Date(ts);
@@ -310,16 +328,36 @@
             if (a==='PARTIAL') return '<span class="align-tag align-tag-partial">4/5</span>';
             return '<span class="align-tag align-tag-none">—</span>';
         }
+        function tfTag(tf) {
+            return `<span class="tf-tag">${tf}</span>`;
+        }
         function wrBadge(wr) { return `<span class="csc-wr ${wr.cls}">${wr.txt}</span>`; }
 
-        // ✅ Filter out cancelled trades FIRST, then by alignment
-        function tradesMatchAlign(trades, alignFilter) {
-            const alive = trades.filter(t => t.status !== 'CANCELLED');
-            if (alignFilter === 'ALL') return alive;
-            return alive.filter(t => (t.alignment || 'NONE') === alignFilter);
+        // Gather all trades from all entry TFs for a symbol
+        function getAllTrades(sym) {
+            let all = [];
+            ENTRY_TFS.forEach(tf => {
+                const trades = currentStats[sym]?.[tf]?.trades || [];
+                trades.forEach(t => {
+                    all.push({ ...t, _tf: t.entry_tf || tf });
+                });
+            });
+            return all;
         }
 
-        // ✅ Skip cancelled trades in all counts
+        // Filter: exclude cancelled, then by TF, then by alignment
+        function filterTrades(trades) {
+            let result = trades.filter(t => t.status !== 'CANCELLED');
+            if (currentTfFilter !== 'ALL') {
+                result = result.filter(t => (t._tf || t.entry_tf) === currentTfFilter);
+            }
+            if (currentAlign !== 'ALL') {
+                result = result.filter(t => (t.alignment || 'NONE') === currentAlign);
+            }
+            return result;
+        }
+
+        // Count from already-filtered trades
         function countFromTrades(trades) {
             let sig=0, ent=0, tp=0, sl=0, pend=0, act=0;
             let godSig=0, godTP=0, godSL=0;
@@ -340,17 +378,15 @@
 
         function renderStats() {
             const grid = document.getElementById('statsGrid');
-            const tf = '5M'; // Only 5M stats now
-
-            let allGlobal = [];
             const symbols = Object.keys(currentStats).sort();
 
+            // Collect all trades across all symbols
+            let allGlobal = [];
             symbols.forEach(sym => {
-                const trades = currentStats[sym]?.[tf]?.trades || [];
-                allGlobal = allGlobal.concat(trades);
+                allGlobal = allGlobal.concat(getAllTrades(sym));
             });
 
-            const filteredGlobal = tradesMatchAlign(allGlobal, currentAlign);
+            const filteredGlobal = filterTrades(allGlobal);
             const gc = countFromTrades(filteredGlobal);
             const gwr = calcWR(gc.tp, gc.sl);
 
@@ -361,8 +397,9 @@
             document.getElementById('gWR').textContent      = gwr.txt;
             document.getElementById('gPending').textContent = gc.pend + gc.act;
 
-            // God/Partial global (always from all alive trades)
-            const gcAll = countFromTrades(allGlobal.filter(t => t.status !== 'CANCELLED'));
+            // God/Partial global (always from all alive trades, no filter)
+            const allAlive = allGlobal.filter(t => t.status !== 'CANCELLED');
+            const gcAll = countFromTrades(allAlive);
             const godWR  = calcWR(gcAll.godTP, gcAll.godSL);
             const partWR = calcWR(gcAll.partTP, gcAll.partSL);
 
@@ -380,9 +417,10 @@
             gPartWRel.textContent = partWR.txt;
             gPartWRel.className = `ab-wr-badge ${partWR.cls}`;
 
+            // Filter symbols that have trades after filtering
             const filteredSyms = symbols.filter(sym => {
-                const trades = currentStats[sym]?.[tf]?.trades || [];
-                return tradesMatchAlign(trades, currentAlign).length > 0;
+                const trades = getAllTrades(sym);
+                return filterTrades(trades).length > 0;
             });
 
             if (!filteredSyms.length) {
@@ -391,34 +429,49 @@
             }
 
             filteredSyms.sort((a,b) => {
-                const at = tradesMatchAlign(currentStats[a]?.[tf]?.trades||[], currentAlign).length;
-                const bt = tradesMatchAlign(currentStats[b]?.[tf]?.trades||[], currentAlign).length;
+                const at = filterTrades(getAllTrades(a)).length;
+                const bt = filterTrades(getAllTrades(b)).length;
                 return bt - at;
             });
 
             grid.innerHTML = '';
 
             filteredSyms.forEach(sym => {
-                const rawTrades = currentStats[sym]?.[tf]?.trades || [];
-                if (!rawTrades.length) return;
+                const allSymTrades = getAllTrades(sym);
+                const filtered = filterTrades(allSymTrades);
+                if (!filtered.length) return;
 
-                const trades = tradesMatchAlign(rawTrades, currentAlign);
-                if (!trades.length) return;
-
-                const c = countFromTrades(trades);
+                const c = countFromTrades(filtered);
                 const wr = calcWR(c.tp, c.sl);
 
-                // Alignment breakdown (from all alive trades, not filtered by align)
-                const rc = countFromTrades(rawTrades.filter(t => t.status !== 'CANCELLED'));
+                // Alignment breakdown (from all alive trades for this sym, unfiltered)
+                const allAlive = allSymTrades.filter(t => t.status !== 'CANCELLED');
+                const rc = countFromTrades(allAlive);
                 const godWr  = calcWR(rc.godTP, rc.godSL);
                 const partWr = calcWR(rc.partTP, rc.partSL);
-                const godPct  = godWr.pct || 0;
-                const partPct = partWr.pct || 0;
+
+                // Per-TF table rows
+                let tfTableRows = '';
+                ENTRY_TFS.forEach(tf => {
+                    const tfTrades = allSymTrades.filter(t => t.status !== 'CANCELLED' && (t._tf || t.entry_tf) === tf);
+                    if (currentTfFilter !== 'ALL' && currentTfFilter !== tf) return;
+                    const tc = countFromTrades(tfTrades);
+                    const twr = calcWR(tc.tp, tc.sl);
+                    tfTableRows += `<tr>
+                        <td>${tf}</td>
+                        <td class="td-signals">${tc.sig}</td>
+                        <td class="td-entries">${tc.ent}</td>
+                        <td class="td-tp">${tc.tp}</td>
+                        <td class="td-sl">${tc.sl}</td>
+                        <td class="td-wr">${twr.txt}</td>
+                        <td class="td-active">${tc.pend+tc.act}</td>
+                    </tr>`;
+                });
 
                 // Recent trades
-                const allForRecent = rawTrades.map(t=>({...t,_tf:tf}));
-                allForRecent.sort((a,b)=>(b.signal_time||0)-(a.signal_time||0));
-                const recent = tradesMatchAlign(allForRecent, currentAlign).slice(0, 8);
+                const recent = filtered
+                    .sort((a,b)=>(b.signal_time||0)-(a.signal_time||0))
+                    .slice(0, 10);
 
                 let recentHTML = '';
                 recent.forEach(t => {
@@ -433,7 +486,7 @@
                     recentHTML += `<div class="trade-row ${cls}">
                         <span>${icon}</span>
                         <span>${di}</span>
-                        <span style="color:rgba(203,213,225,0.55);">5M</span>
+                        ${tfTag(t._tf || t.entry_tf || '?')}
                         ${alignTag(t.alignment||'NONE')}
                         <span style="color:#38bdf8;">${t.entry}</span>
                         <span style="color:${stc};font-weight:700;">${stxt}</span>
@@ -454,15 +507,7 @@
                                 <th>TP ✅</th><th>SL ❌</th><th>Win%</th><th>Live</th>
                             </tr></thead>
                             <tbody>
-                                <tr>
-                                    <td>5M</td>
-                                    <td class="td-signals">${c.sig}</td>
-                                    <td class="td-entries">${c.ent}</td>
-                                    <td class="td-tp">${c.tp}</td>
-                                    <td class="td-sl">${c.sl}</td>
-                                    <td class="td-wr">${wr.txt}</td>
-                                    <td class="td-active">${c.pend+c.act}</td>
-                                </tr>
+                                ${tfTableRows}
                             </tbody>
                         </table>
 
@@ -474,7 +519,7 @@
                                     <div class="cab-stat"><div class="cab-stat-val" style="color:#34d399;">${rc.godTP}</div><div class="cab-stat-lbl">TP Hits</div></div>
                                     <div class="cab-stat"><div class="cab-stat-val" style="color:#f87171;">${rc.godSL}</div><div class="cab-stat-lbl">SL Hits</div></div>
                                 </div>
-                                <div class="cab-wr-bar"><div class="cab-wr-fill" style="width:${Math.min(godPct,100)}%"></div></div>
+                                <div class="cab-wr-bar"><div class="cab-wr-fill" style="width:${Math.min(godWr.pct||0,100)}%"></div></div>
                                 <div class="cab-wr-label">${godWr.txt}</div>
                             </div>
                             <div class="cab-cell cab-partial">
@@ -484,7 +529,7 @@
                                     <div class="cab-stat"><div class="cab-stat-val" style="color:#34d399;">${rc.partTP}</div><div class="cab-stat-lbl">TP Hits</div></div>
                                     <div class="cab-stat"><div class="cab-stat-val" style="color:#f87171;">${rc.partSL}</div><div class="cab-stat-lbl">SL Hits</div></div>
                                 </div>
-                                <div class="cab-wr-bar"><div class="cab-wr-fill" style="width:${Math.min(partPct,100)}%"></div></div>
+                                <div class="cab-wr-bar"><div class="cab-wr-fill" style="width:${Math.min(partWr.pct||0,100)}%"></div></div>
                                 <div class="cab-wr-label">${partWr.txt}</div>
                             </div>
                         </div>
