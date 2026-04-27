@@ -19,7 +19,7 @@ const TG_1M_ENTRIES = process.env.TG_1M_ENTRIES;
 const TG_3M_ENTRIES = process.env.TG_3M_ENTRIES;
 const TG_5M_ENTRIES = process.env.TG_5M_ENTRIES;
 
-const REDIS_STATE_KEY     = process.env.REDIS_KEY || 'godModeState_v5';
+const REDIS_STATE_KEY = process.env.REDIS_KEY || 'godModeState_v4';
 const REDIS_LOG_KEY       = REDIS_STATE_KEY + '_activityLog';
 const REDIS_STATS_KEY     = REDIS_STATE_KEY + '_tradeStats';
 
