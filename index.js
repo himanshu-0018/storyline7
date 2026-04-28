@@ -23,9 +23,9 @@ const REDIS_STATE_KEY = process.env.REDIS_KEY || 'godModeState_v4';
 const REDIS_LOG_KEY       = REDIS_STATE_KEY + '_activityLog';
 const REDIS_STATS_KEY     = REDIS_STATE_KEY + '_tradeStats';
 
-const ZONE_TIMEFRAMES     = ["1D", "4H", "1H", "30M", "15M"];
-const GOD_THRESHOLD       = 5;
-const PARTIAL_THRESHOLD   = 4;
+const ZONE_TIMEFRAMES     = ["1W", "1D", "4H", "1H", "30M", "15M"];
+const GOD_THRESHOLD       = 6;
+const PARTIAL_THRESHOLD   = 5;
 
 // ═══ NEW: Accepted entry timeframes ═══
 const ENTRY_TFS = ["1M", "3M", "5M"];
@@ -267,7 +267,7 @@ function findBestTrade(stats, { tradeId, direction, entry, allowedStatuses }) {
 }
 
 // ══════════════════════════════════════════════
-// ALIGNMENT ENGINE — 1D + 4H + 1H + 30M + 15M
+// ALIGNMENT ENGINE — 1W + 1D + 4H + 1H + 30M + 15M
 // ══════════════════════════════════════════════
 function recalculateAlignment(symbol) {
     if (!marketState[symbol]) return { dominantState:"NONE", bullCount:0, bearCount:0, alignCount:0, partialState:"NONE", partialCount:0 };
@@ -307,7 +307,7 @@ function getDirectionAlignCount(symbol, direction) {
 function validateGodMode(symbol, direction) {
     if (!marketState[symbol]) return { valid: false, reason: "Not tracked" };
     const god = marketState[symbol].lastAlertedState;
-    if (god === "NONE")    return { valid: false, reason: "No God-Mode (need 5/5)" };
+    if (god === "NONE")    return { valid: false, reason: "No God-Mode (need 6/6)" };
     if (direction !== god) return { valid: false, reason: `Direction mismatch: signal=${direction}, god=${god}` };
     return { valid: true, godState: god };
 }
@@ -318,13 +318,13 @@ function validatePartial(symbol, direction) {
     const tfs = marketState[symbol].timeframes || {};
     let count = 0;
     ZONE_TIMEFRAMES.forEach(tf => { if (tfs[tf] === direction) count++; });
-    if (count < PARTIAL_THRESHOLD) return { valid: false, reason: `Only ${count}/5 aligned for ${direction}` };
+    if (count < PARTIAL_THRESHOLD) return { valid: false, reason: `Only ${count}/6 aligned for ${direction}` };
     return { valid: true, alignCount: count };
 }
 
 function getAlignmentType(symbol, direction) {
     const godCheck = validateGodMode(symbol, direction);
-    if (godCheck.valid) return { type: 'GOD', valid: true, alignCount: 5 };
+    if (godCheck.valid) return { type: 'GOD', valid: true, alignCount: 6 };
     const partialCheck = validatePartial(symbol, direction);
     if (partialCheck.valid) return { type: 'PARTIAL', valid: true, alignCount: partialCheck.alignCount };
     return { type: 'NONE', valid: false, reason: partialCheck.reason };
@@ -347,7 +347,7 @@ async function invalidatePendingTrades(symbol) {
             if (count < PARTIAL_THRESHOLD) {
                 trade.status = 'CANCELLED';
                 trade.cancelled_time = Date.now();
-                trade.cancelled_reason = `Alignment dropped to ${count}/5`;
+                trade.cancelled_reason = `Alignment dropped to ${count}/6`;
 
                 if (stats.total_signals > 0) stats.total_signals--;
 
@@ -469,7 +469,8 @@ function normalizeTf(tf) {
         "30":"30M","30M":"30M","30MIN":"30M",
         "60":"1H","1H":"1H","1HR":"1H",
         "240":"4H","4H":"4H",
-        "1D":"1D","D":"1D"
+        "1D":"1D","D":"1D",
+        "1W":"1W","W":"1W","WEEKLY":"1W"
     };
     return map[tf.toString().toUpperCase().trim()] || tf.toString().toUpperCase().trim();
 }
@@ -594,7 +595,7 @@ app.post('/webhook', async (req, res) => {
     const isEntry     = payload.type  !== undefined;
 
     // ════════════════════════════════════════
-    // STORYLINE — 1D / 4H / 1H / 30M / 15M
+    // STORYLINE — 1W / 1D / 4H / 1H / 30M / 15M
     // ════════════════════════════════════════
     if (isStoryline) {
         const sym   = (payload.symbol || '').toUpperCase().trim();
@@ -630,7 +631,7 @@ app.post('/webhook', async (req, res) => {
 
         const prev = marketState[sym].lastAlertedState;
         const { dominantState, bullCount, bearCount, alignCount, partialState, partialCount } = recalculateAlignment(sym);
-        console.log(`[ALIGN] ${sym} → God:${dominantState} | Bull:${bullCount}/5 Bear:${bearCount}/5 | Partial:${partialState}(${partialCount}/5)`);
+        console.log(`[ALIGN] ${sym} → God:${dominantState} | Bull:${bullCount}/6 Bear:${bearCount}/6 | Partial:${partialState}(${partialCount}/6)`);
 
         // God-Mode ON
         if (dominantState !== "NONE" && dominantState !== prev) {
@@ -639,11 +640,11 @@ app.post('/webhook', async (req, res) => {
             marketState[sym].lastGodModeStartTime = now;
             const emoji = dominantState === "BULLISH" ? "🚀 🐂" : "🩸 🐻";
             let msg  = `<b>${emoji} GOD-MODE: ${sym}</b>\n\n`;
-            msg += `<b>Alignment:</b> ${dominantState} (5/5)\n`;
+            msg += `<b>Alignment:</b> ${dominantState} (6/6)\n`;
             msg += `${tfInfoString(sym)}\n`;
-            msg += `\n✅ All 5 timeframes aligned!`;
+            msg += `\n✅ All 6 timeframes aligned!`;
             await sendTelegram(TELEGRAM_STORYLINE_CHAT_ID, msg);
-            await pushLogEvent(sym, dominantState, `GOD-MODE ON: ${dominantState} (5/5)`, now);
+            await pushLogEvent(sym, dominantState, `GOD-MODE ON: ${dominantState} (6/6)`, now);
             console.log(`[GOD ON] ${sym} → ${dominantState}`);
         }
 
@@ -651,11 +652,11 @@ app.post('/webhook', async (req, res) => {
         if (dominantState === "NONE" && prev !== "NONE") {
             marketState[sym].lastAlertedState = "NONE";
             let msg  = `<b>⚠️ ALIGNMENT LOST: ${sym}</b>\n\n`;
-            msg += `Was: ${prev} (5/5)\n`;
-            msg += `Now: ${partialState !== "NONE" ? partialState + ` (${partialCount}/5)` : `${alignCount}/5`}\n`;
+            msg += `Was: ${prev} (6/6)\n`;
+            msg += `Now: ${partialState !== "NONE" ? partialState + ` (${partialCount}/6)` : `${alignCount}/6`}\n`;
             msg += `${tfInfoString(sym)}`;
             await sendTelegram(TELEGRAM_STORYLINE_CHAT_ID, msg);
-            await pushLogEvent(sym, 'NONE', `Alignment Lost: was ${prev} (5/5)`, Date.now());
+            await pushLogEvent(sym, 'NONE', `Alignment Lost: was ${prev} (6/6)`, Date.now());
             console.log(`[GOD OFF] ${sym} → NONE`);
         }
 
@@ -665,10 +666,10 @@ app.post('/webhook', async (req, res) => {
             if (prevPartial !== partialState || (prev !== "NONE" && dominantState === "NONE")) {
                 const emoji = partialState === "BULLISH" ? "⚡ 🐂" : "⚡ 🐻";
                 let msg  = `<b>${emoji} PARTIAL: ${sym}</b>\n\n`;
-                msg += `<b>Alignment:</b> ${partialState} (${partialCount}/5)\n`;
+                msg += `<b>Alignment:</b> ${partialState} (${partialCount}/6)\n`;
                 msg += `${tfInfoString(sym)}`;
                 await sendTelegram(TELEGRAM_STORYLINE_CHAT_ID, msg);
-                await pushLogEvent(sym, partialState, `PARTIAL: ${partialState} (${partialCount}/5)`, Date.now());
+                await pushLogEvent(sym, partialState, `PARTIAL: ${partialState} (${partialCount}/6)`, Date.now());
             }
         }
         marketState[sym]._lastPartialState = partialState;
@@ -724,7 +725,7 @@ app.post('/webhook', async (req, res) => {
                 return res.status(200).send("OK — No alignment, skipped");
             }
 
-            console.log(`  ✅ ALIGNED [${alignResult.type}] ${sym} ${direction} ${entryTf} (${alignResult.alignCount}/5)`);
+            console.log(`  ✅ ALIGNED [${alignResult.type}] ${sym} ${direction} ${entryTf} (${alignResult.alignCount}/6)`);
 
             // Step 2: Record to stats
             const newTradeId = await recordSignal(
@@ -738,7 +739,7 @@ app.post('/webhook', async (req, res) => {
             const chatId = TG_CHANNEL_MAP[entryTf]?.();
 
             if (chatId) {
-                const alignLabel = alignResult.type === 'GOD' ? 'GOD-MODE (5/5)' : `PARTIAL (${alignResult.alignCount}/5)`;
+                const alignLabel = alignResult.type === 'GOD' ? 'GOD-MODE (6/6)' : `PARTIAL (${alignResult.alignCount}/6)`;
                 const alignEmoji = alignResult.type === 'GOD' ? '✅' : '⚡';
                 const dirEmoji   = direction === "BULLISH" ? "🟢 🐂" : "🔴 🐻";
 
@@ -775,7 +776,7 @@ app.post('/webhook', async (req, res) => {
 
             await pushLogEvent(
                 sym, direction,
-                `${type} ${entryTf} [${alignResult.type} ${alignResult.alignCount}/5] Entry:${entry} SL:${sl}`,
+                `${type} ${entryTf} [${alignResult.type} ${alignResult.alignCount}/6] Entry:${entry} SL:${sl}`,
                 Date.now()
             );
             broadcastAll();
@@ -836,7 +837,7 @@ app.get('/stats', (req, res) => res.sendFile(path.join(__dirname, 'public', 'sta
 // ══════════════════════════════════════════════
 app.listen(PORT, () => {
     console.log(`\n🚀 God-Mode V5 on port ${PORT}`);
-    console.log(`📊 Alignment: ${GOD_THRESHOLD}/5 = GOD, ${PARTIAL_THRESHOLD}/5 = PARTIAL (${ZONE_TIMEFRAMES.join(' + ')})`);
+    console.log(`📊 Alignment: ${GOD_THRESHOLD}/6 = GOD, ${PARTIAL_THRESHOLD}/6 = PARTIAL (${ZONE_TIMEFRAMES.join(' + ')})`);
     console.log(`📡 Entry TFs: ${ENTRY_TFS.join(', ')}`);
     console.log(`📡 1M Entries: ${TG_1M_ENTRIES || 'NOT SET'}`);
     console.log(`📡 3M Entries: ${TG_3M_ENTRIES || 'NOT SET'}`);
