@@ -198,7 +198,7 @@
                 display:flex;align-items:center;justify-content:center;font-size:1.3rem;">📊</div>
             <div>
                 <div class="brand-name">TRADE STATISTICS</div>
-                <div class="brand-sub">ENTRY / TP / SL · PER COIN · 1M / 3M / 5M · GOD (5/5) vs PARTIAL (4/5)</div>
+                <div class="brand-sub">ENTRY / TP / SL · PER COIN · 1M / 3M / 5M · GOD (6/6) vs PARTIAL (5/6)</div>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -220,7 +220,7 @@
 
         <div class="align-breakdown-global">
             <div class="ab-global-card abg-god">
-                <div class="ab-global-title">✅ GOD-MODE (5/5) — All Coins</div>
+                <div class="ab-global-title">✅ GOD-MODE (6/6) — All Coins</div>
                 <div class="ab-stats-row">
                     <div class="ab-stat-item"><div class="ab-stat-val" id="gGodSig" style="color:#38bdf8;">0</div><div class="ab-stat-lbl">Signals</div></div>
                     <div class="ab-stat-item"><div class="ab-stat-val" id="gGodTP" style="color:#34d399;">0</div><div class="ab-stat-lbl">TP Hits</div></div>
@@ -229,7 +229,7 @@
                 </div>
             </div>
             <div class="ab-global-card abg-partial">
-                <div class="ab-global-title">⚡ PARTIAL (4/5) — All Coins</div>
+                <div class="ab-global-title">⚡ PARTIAL (5/6) — All Coins</div>
                 <div class="ab-stats-row">
                     <div class="ab-stat-item"><div class="ab-stat-val" id="gPartSig" style="color:#38bdf8;">0</div><div class="ab-stat-lbl">Signals</div></div>
                     <div class="ab-stat-item"><div class="ab-stat-val" id="gPartTP" style="color:#34d399;">0</div><div class="ab-stat-lbl">TP Hits</div></div>
@@ -251,8 +251,8 @@
             <div class="filter-group">
                 <span class="filter-group-label">ALIGN:</span>
                 <button class="filter-btn active-align-all" id="al-ALL" onclick="setAlignFilter('ALL',this)">ALL</button>
-                <button class="filter-btn" id="al-GOD" onclick="setAlignFilter('GOD',this)">✅ GOD (5/5)</button>
-                <button class="filter-btn" id="al-PARTIAL" onclick="setAlignFilter('PARTIAL',this)">⚡ PARTIAL (4/5)</button>
+                <button class="filter-btn" id="al-GOD" onclick="setAlignFilter('GOD',this)">✅ GOD (6/6)</button>
+                <button class="filter-btn" id="al-PARTIAL" onclick="setAlignFilter('PARTIAL',this)">⚡ PARTIAL (5/6)</button>
             </div>
         </div>
 
@@ -325,7 +325,7 @@
         }
         function alignTag(a) {
             if (a==='GOD')     return '<span class="align-tag align-tag-god">GOD</span>';
-            if (a==='PARTIAL') return '<span class="align-tag align-tag-partial">4/5</span>';
+            if (a==='PARTIAL') return '<span class="align-tag align-tag-partial">5/6</span>';
             return '<span class="align-tag align-tag-none">—</span>';
         }
         function tfTag(tf) {
@@ -513,7 +513,7 @@
 
                         <div class="coin-align-breakdown">
                             <div class="cab-cell cab-god">
-                                <div class="cab-title"><span>✅ GOD-MODE (5/5)</span></div>
+                                <div class="cab-title"><span>✅ GOD-MODE (6/6)</span></div>
                                 <div class="cab-stats">
                                     <div class="cab-stat"><div class="cab-stat-val" style="color:#38bdf8;">${rc.godSig}</div><div class="cab-stat-lbl">Signals</div></div>
                                     <div class="cab-stat"><div class="cab-stat-val" style="color:#34d399;">${rc.godTP}</div><div class="cab-stat-lbl">TP Hits</div></div>
@@ -523,7 +523,7 @@
                                 <div class="cab-wr-label">${godWr.txt}</div>
                             </div>
                             <div class="cab-cell cab-partial">
-                                <div class="cab-title"><span>⚡ PARTIAL (4/5)</span></div>
+                                <div class="cab-title"><span>⚡ PARTIAL (5/6)</span></div>
                                 <div class="cab-stats">
                                     <div class="cab-stat"><div class="cab-stat-val" style="color:#38bdf8;">${rc.partSig}</div><div class="cab-stat-lbl">Signals</div></div>
                                     <div class="cab-stat"><div class="cab-stat-val" style="color:#34d399;">${rc.partTP}</div><div class="cab-stat-lbl">TP Hits</div></div>
