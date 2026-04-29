@@ -233,6 +233,51 @@
             color:rgba(148,163,184,0.3);
         }
 
+        /* ── FEED PANEL ── */
+        .feed-panel {
+            width:300px;flex-shrink:0;
+            display:flex;flex-direction:column;border-radius:16px;overflow:hidden;
+            border:1px solid rgba(255,255,255,0.07);
+            background:rgba(8,12,22,0.85);backdrop-filter:blur(24px);
+        }
+        .feed-header {
+            padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);
+            background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(167,139,250,0.08));
+            display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+        }
+        .feed-title { font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;color:#c4b5fd;letter-spacing:0.1em; }
+        .feed-body {
+            flex:1;overflow-y:auto;padding:10px;
+            display:flex;flex-direction:column;gap:8px;
+            scrollbar-width:thin;scrollbar-color:rgba(139,92,246,0.3) transparent;
+        }
+        .feed-body::-webkit-scrollbar { width:4px; }
+        .feed-body::-webkit-scrollbar-thumb { background:rgba(139,92,246,0.3);border-radius:4px; }
+
+        .log-card {
+            padding:10px 12px;border-radius:10px;animation:logSlide 0.3s ease-out;
+        }
+        .log-card-added {
+            background:linear-gradient(135deg,rgba(5,46,22,0.8),rgba(6,78,59,0.4));
+            border:1px solid rgba(16,185,129,0.25);border-left:3px solid #10b981;
+        }
+        .log-card-removed {
+            background:linear-gradient(135deg,rgba(69,10,10,0.8),rgba(127,29,29,0.4));
+            border:1px solid rgba(239,68,68,0.25);border-left:3px solid #ef4444;
+        }
+        .log-card-flipped {
+            background:linear-gradient(135deg,rgba(80,40,0,0.8),rgba(120,60,0,0.4));
+            border:1px solid rgba(245,158,11,0.25);border-left:3px solid #f59e0b;
+        }
+        @keyframes logSlide { from{opacity:0;transform:translateX(12px);} to{opacity:1;transform:translateX(0);} }
+        .log-sym { font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;color:#f1f5f9; }
+        .log-msg { font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:rgba(203,213,225,0.75);margin-top:3px; }
+        .log-time { font-family:'JetBrains Mono',monospace;font-size:0.55rem; }
+        .feed-count {
+            font-family:'JetBrains Mono',monospace;font-size:0.55rem;
+            color:rgba(196,181,253,0.5);letter-spacing:0.08em;
+        }
+
         @keyframes logoGlow { 0%,100%{box-shadow:0 0 25px rgba(139,92,246,0.4);} 50%{box-shadow:0 0 40px rgba(167,139,250,0.5);} }
         ::-webkit-scrollbar { width:4px; }
         ::-webkit-scrollbar-track { background:transparent; }
@@ -295,17 +340,34 @@
                 </div>
             </div>
         </div>
+
+        <!-- ACTIVITY FEED -->
+        <div class="feed-panel">
+            <div class="feed-header">
+                <span class="feed-title">📡 ALIGNMENT FEED</span>
+                <span class="feed-count" id="feedCount">0 EVENTS</span>
+            </div>
+            <div class="feed-body" id="activityFeed">
+                <p id="emptyFeed" style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">
+                    Watching for alignment changes...
+                </p>
+            </div>
+        </div>
     </div>
 
     <script>
         const FILTER_TFS = ['1W', '1D', '4H'];
-        const FILTER_API = '/api/filtered-state/wdh';
         const FILTER_LABEL = 'W+D+4H';
+        const FILTER_ICON = '🔱';
 
         const moneySound = new Audio('/money.mp3');
         moneySound.volume = 0.85;
         let audioOn = false;
-        let prevSymbols = new Set();
+
+        // Track previous state for diff
+        let prevAligned = {};   // { symbol: direction }
+        let feedLog = [];       // activity feed entries
+        let isFirstLoad = true;
 
         function toggleAudio() {
             audioOn = !audioOn;
@@ -319,48 +381,145 @@
             moneySound.currentTime=0; moneySound.play().catch(()=>{});
         }
 
+        function fmtTime(ts) {
+            if (!ts) return '';
+            const d = new Date(ts);
+            const old = Date.now() - ts > 86400000;
+            const t = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            return old ? d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ' ' + t : t;
+        }
+
         function tfEmo(s) { return s==='BULLISH'?'🐂':s==='BEARISH'?'🐻':'—'; }
         function tfCellCls(s) { return s==='BULLISH'?'tf-cell-bull':s==='BEARISH'?'tf-cell-bear':''; }
 
-        function filterState(ms) {
-            const filtered = {};
+        function getAligned(ms) {
+            const result = {};
             for (const sym in ms) {
                 const tfs = ms[sym].timeframes || {};
                 const vals = FILTER_TFS.map(tf => tfs[tf] || 'NONE');
                 if (vals[0] !== 'NONE' && vals.every(v => v === vals[0])) {
-                    filtered[sym] = ms[sym];
-                    filtered[sym]._filterDir = vals[0];
+                    result[sym] = vals[0];
                 }
             }
-            return filtered;
+            return result;
+        }
+
+        // ═══ DIFF ENGINE — detect added / removed / flipped ═══
+        function diffAligned(oldMap, newMap) {
+            const events = [];
+            const now = Date.now();
+
+            // New or flipped
+            for (const sym in newMap) {
+                if (!(sym in oldMap)) {
+                    events.push({
+                        symbol: sym,
+                        type: 'ADDED',
+                        direction: newMap[sym],
+                        message: `🟢 ALIGNED ${newMap[sym]} (${FILTER_LABEL} 3/3)`,
+                        timestamp: now
+                    });
+                } else if (oldMap[sym] !== newMap[sym]) {
+                    events.push({
+                        symbol: sym,
+                        type: 'FLIPPED',
+                        direction: newMap[sym],
+                        message: `🔄 FLIPPED ${oldMap[sym]} → ${newMap[sym]} (${FILTER_LABEL})`,
+                        timestamp: now
+                    });
+                }
+            }
+
+            // Removed
+            for (const sym in oldMap) {
+                if (!(sym in newMap)) {
+                    events.push({
+                        symbol: sym,
+                        type: 'REMOVED',
+                        direction: oldMap[sym],
+                        message: `🔴 LOST alignment (was ${oldMap[sym]})`,
+                        timestamp: now
+                    });
+                }
+            }
+
+            return events;
+        }
+
+        function addFeedEvents(events) {
+            if (events.length === 0) return;
+            feedLog = [...events, ...feedLog];
+            if (feedLog.length > 100) feedLog = feedLog.slice(0, 100);
+            rebuildFeed();
+        }
+
+        function rebuildFeed() {
+            const feed = document.getElementById('activityFeed');
+            const countEl = document.getElementById('feedCount');
+
+            if (feedLog.length === 0) {
+                feed.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">Watching for alignment changes...</p>`;
+                countEl.textContent = '0 EVENTS';
+                return;
+            }
+
+            countEl.textContent = `${feedLog.length} EVENT${feedLog.length !== 1 ? 'S' : ''}`;
+
+            feed.innerHTML = feedLog.map(e => {
+                let cls, icon, tc;
+                if (e.type === 'ADDED') {
+                    cls = 'log-card log-card-added';
+                    icon = '🟢';
+                    tc = 'rgba(52,211,153,0.8)';
+                } else if (e.type === 'REMOVED') {
+                    cls = 'log-card log-card-removed';
+                    icon = '🔴';
+                    tc = 'rgba(248,113,113,0.8)';
+                } else {
+                    cls = 'log-card log-card-flipped';
+                    icon = '🔄';
+                    tc = 'rgba(251,191,36,0.8)';
+                }
+                return `<div class="${cls}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                        <span class="log-sym">${icon} ${e.symbol}</span>
+                        <span class="log-time" style="color:${tc};">${fmtTime(e.timestamp)}</span>
+                    </div>
+                    <div class="log-msg">${e.message}</div>
+                </div>`;
+            }).join('');
         }
 
         function render(ms) {
-            const filtered = filterState(ms);
+            const currentAligned = getAligned(ms);
             const grid = document.getElementById('coinGrid');
-            const syms = Object.keys(filtered).sort();
+            const syms = Object.keys(currentAligned).sort();
 
-            const bulls = syms.filter(s => filtered[s]._filterDir === 'BULLISH').length;
-            const bears = syms.filter(s => filtered[s]._filterDir === 'BEARISH').length;
+            const bulls = syms.filter(s => currentAligned[s] === 'BULLISH').length;
+            const bears = syms.filter(s => currentAligned[s] === 'BEARISH').length;
 
             document.getElementById('matchCounter').textContent = syms.length;
             document.getElementById('bullPill').textContent = `🐂 ${bulls} BULLISH`;
             document.getElementById('bearPill').textContent = `🐻 ${bears} BEARISH`;
-            document.getElementById('totalPill').textContent = `🔱 ${syms.length} ALIGNED`;
+            document.getElementById('totalPill').textContent = `${FILTER_ICON} ${syms.length} ALIGNED`;
 
-            // Sound alert for new coins
-            const currentSyms = new Set(syms);
-            if (prevSymbols.size > 0) {
-                for (const s of currentSyms) {
-                    if (!prevSymbols.has(s)) playSound();
+            // Diff detection
+            if (!isFirstLoad) {
+                const events = diffAligned(prevAligned, currentAligned);
+                if (events.length > 0) {
+                    addFeedEvents(events);
+                    const hasAdded = events.some(e => e.type === 'ADDED' || e.type === 'FLIPPED');
+                    if (hasAdded) playSound();
                 }
             }
-            prevSymbols = currentSyms;
+
+            prevAligned = { ...currentAligned };
+            isFirstLoad = false;
 
             if (syms.length === 0) {
                 grid.innerHTML = `
                     <div class="empty-state" style="grid-column:1/-1;">
-                        <div class="empty-icon">🔱</div>
+                        <div class="empty-icon">${FILTER_ICON}</div>
                         <div class="empty-title">No ${FILTER_LABEL} alignment found</div>
                         <div class="empty-sub">Waiting for 1W + 1D + 4H to align in same direction</div>
                     </div>`;
@@ -369,14 +528,14 @@
 
             grid.innerHTML = '';
             syms.forEach(sym => {
-                const d = filtered[sym];
+                const d = ms[sym];
                 const tfs = d.timeframes || {};
-                const dir = d._filterDir;
+                const dir = currentAligned[sym];
                 const cardCls = dir === 'BULLISH' ? 'card-bull' : 'card-bear';
                 const badgeCls = dir === 'BULLISH' ? 'card-badge-bull' : 'card-badge-bear';
                 const badgeTxt = dir === 'BULLISH' ? '🐂 BULLISH 3/3' : '🐻 BEARISH 3/3';
                 const barCls = dir === 'BULLISH' ? 'align-bar-bull' : 'align-bar-bear';
-                const barTxt = dir === 'BULLISH' ? '✅ W+D+4H BULLISH ALIGNED' : '✅ W+D+4H BEARISH ALIGNED';
+                const barTxt = dir === 'BULLISH' ? `✅ ${FILTER_LABEL} BULLISH ALIGNED` : `✅ ${FILTER_LABEL} BEARISH ALIGNED`;
 
                 let tfCells = '';
                 FILTER_TFS.forEach(tf => {
@@ -390,7 +549,6 @@
                         </div>`;
                 });
 
-                // Show full alignment context
                 const allTfs = ['1W','1D','4H','1H','30M','15M'];
                 const fullCount = allTfs.filter(tf => tfs[tf] === dir).length;
 
@@ -423,16 +581,16 @@
         const bdg = document.getElementById('liveBadge');
 
         es.onopen = () => {
-            dot.className='pulse-dot';lbl.textContent='LIVE';
-            lbl.style.color='#34d399';bdg.className='live-badge';
+            dot.className='pulse-dot'; lbl.textContent='LIVE';
+            lbl.style.color='#34d399'; bdg.className='live-badge';
         };
         es.onerror = () => {
-            dot.className='pulse-dot offline';lbl.textContent='RECONNECTING';
-            lbl.style.color='#f87171';bdg.className='live-badge offline';
+            dot.className='pulse-dot offline'; lbl.textContent='RECONNECTING';
+            lbl.style.color='#f87171'; bdg.className='live-badge offline';
         };
         es.onmessage = e => {
             const data = JSON.parse(e.data);
-            if (data.soundAlert) { playSound(); return; }
+            if (data.soundAlert) return; // ignore entry sound alerts on filter page
             const ms = data.marketState || data;
             render(ms);
         };
