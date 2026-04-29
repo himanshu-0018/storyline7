@@ -14,12 +14,11 @@ const PORT                       = process.env.PORT || 3000;
 const TELEGRAM_TOKEN             = process.env.TELEGRAM_TOKEN;
 const TELEGRAM_STORYLINE_CHAT_ID = process.env.TELEGRAM_STORYLINE_CHAT_ID;
 
-// ═══ NEW: 3 TF-based Telegram channels ═══
 const TG_1M_ENTRIES = process.env.TG_1M_ENTRIES;
 const TG_3M_ENTRIES = process.env.TG_3M_ENTRIES;
 const TG_5M_ENTRIES = process.env.TG_5M_ENTRIES;
 
-const REDIS_STATE_KEY = process.env.REDIS_KEY || 'godModeState_v4';
+const REDIS_STATE_KEY     = process.env.REDIS_KEY || 'godModeState_v4';
 const REDIS_LOG_KEY       = REDIS_STATE_KEY + '_activityLog';
 const REDIS_STATS_KEY     = REDIS_STATE_KEY + '_tradeStats';
 
@@ -27,15 +26,28 @@ const ZONE_TIMEFRAMES     = ["1W", "1D", "4H", "1H", "30M", "15M"];
 const GOD_THRESHOLD       = 6;
 const PARTIAL_THRESHOLD   = 5;
 
-// ═══ NEW: Accepted entry timeframes ═══
 const ENTRY_TFS = ["1M", "3M", "5M"];
 
-// ═══ NEW: TF → Telegram channel map ═══
 const TG_CHANNEL_MAP = {
     "1M": () => TG_1M_ENTRIES,
     "3M": () => TG_3M_ENTRIES,
     "5M": () => TG_5M_ENTRIES
 };
+
+// ═══ ALIGNMENT COMBOS FOR STATS ═══
+const ALIGNMENT_COMBOS = [
+    { id: "W_D_4H",             label: "W+D+4H",              tfs: ["1W","1D","4H"] },
+    { id: "W_D_4H_1H",          label: "W+D+4H+1H",           tfs: ["1W","1D","4H","1H"] },
+    { id: "W_D_4H_1H_30M",      label: "W+D+4H+1H+30M",       tfs: ["1W","1D","4H","1H","30M"] },
+    { id: "W_D_4H_1H_30M_15M",  label: "W+D+4H+1H+30M+15M",   tfs: ["1W","1D","4H","1H","30M","15M"] },
+    { id: "D_4H",               label: "D+4H",                tfs: ["1D","4H"] },
+    { id: "D_4H_1H",            label: "D+4H+1H",             tfs: ["1D","4H","1H"] },
+    { id: "D_4H_1H_30M",        label: "D+4H+1H+30M",         tfs: ["1D","4H","1H","30M"] },
+    { id: "D_4H_1H_30M_15M",    label: "D+4H+1H+30M+15M",     tfs: ["1D","4H","1H","30M","15M"] },
+    { id: "4H_1H",              label: "4H+1H",               tfs: ["4H","1H"] },
+    { id: "4H_1H_30M",          label: "4H+1H+30M",           tfs: ["4H","1H","30M"] },
+    { id: "4H_1H_30M_15M",      label: "4H+1H+30M+15M",       tfs: ["4H","1H","30M","15M"] }
+];
 
 let marketState  = {};
 let activityLog  = [];
@@ -62,7 +74,7 @@ function broadcastStats() {
 }
 
 // ══════════════════════════════════════════════
-// TELEGRAM — TRACKED SEND + DELETE
+// TELEGRAM
 // ══════════════════════════════════════════════
 async function sendTelegramTracked(chatId, message) {
     if (!TELEGRAM_TOKEN || !chatId) return { ok: false, messageId: null };
@@ -70,9 +82,9 @@ async function sendTelegramTracked(chatId, message) {
         const resp = await fetch(
             `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
             {
-                method:  'POST',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" })
+                body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" })
             }
         );
         if (!resp.ok) return { ok: false, messageId: null };
@@ -108,9 +120,9 @@ async function sendTelegram(chatId, message) {
         const resp = await fetch(
             `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
             {
-                method:  'POST',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" })
+                body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" })
             }
         );
         return resp.ok;
@@ -149,6 +161,38 @@ function priceMatch(a, b) {
 
 function makeTradeId(symbol, tf) {
     return `${symbol}_${tf}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// ══════════════════════════════════════════════
+// ALIGNMENT COMBO CALCULATOR
+// ══════════════════════════════════════════════
+function getMatchedCombos(symbol, direction) {
+    if (!marketState[symbol]) return [];
+    const tfs = marketState[symbol].timeframes || {};
+    const matched = [];
+    for (const combo of ALIGNMENT_COMBOS) {
+        const allMatch = combo.tfs.every(tf => tfs[tf] === direction);
+        if (allMatch) {
+            matched.push(combo.id);
+        }
+    }
+    return matched;
+}
+
+function getAlignmentSummary(symbol, direction) {
+    if (!marketState[symbol]) return { count: 0, combos: [], godMode: false, partial: false };
+    const tfs = marketState[symbol].timeframes || {};
+    let count = 0;
+    ZONE_TIMEFRAMES.forEach(tf => {
+        if (tfs[tf] === direction) count++;
+    });
+    const combos = getMatchedCombos(symbol, direction);
+    return {
+        count,
+        combos,
+        godMode: count >= GOD_THRESHOLD,
+        partial: count >= PARTIAL_THRESHOLD && count < GOD_THRESHOLD
+    };
 }
 
 // ══════════════════════════════════════════════
@@ -225,7 +269,7 @@ async function saveStats() {
 }
 
 // ══════════════════════════════════════════════
-// MULTI-POSITION SAFE TRADE FINDER (FIFO)
+// TRADE FINDER (FIFO)
 // ══════════════════════════════════════════════
 function findBestTrade(stats, { tradeId, direction, entry, allowedStatuses }) {
     const trades = stats.trades;
@@ -267,7 +311,7 @@ function findBestTrade(stats, { tradeId, direction, entry, allowedStatuses }) {
 }
 
 // ══════════════════════════════════════════════
-// ALIGNMENT ENGINE — 1W + 1D + 4H + 1H + 30M + 15M
+// ALIGNMENT ENGINE
 // ══════════════════════════════════════════════
 function recalculateAlignment(symbol) {
     if (!marketState[symbol]) return { dominantState:"NONE", bullCount:0, bearCount:0, alignCount:0, partialState:"NONE", partialCount:0 };
@@ -379,26 +423,27 @@ async function invalidatePendingTrades(symbol) {
 // ══════════════════════════════════════════════
 // RECORD FUNCTIONS
 // ══════════════════════════════════════════════
-async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, touchedLevel, alignmentType, tradeType) {
+async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, alignmentType, alignCombos, alignCount) {
     const stats = ensureStats(symbol, tf);
     stats.total_signals++;
 
     const trade = {
-        id:            makeTradeId(symbol, tf),
-        trade_type:    tradeType || '',
+        id:              makeTradeId(symbol, tf),
+        trade_type:      'OB',
         direction,
-        entry:         parseFloat(entry)  || entry,
-        sl:            parseFloat(sl)     || sl,
-        tp:            parseFloat(tp)     || tp,
-        rr:            parseFloat(rr)     || rr,
-        touched_level: touchedLevel || '',
-        channel:       `${tf}_ENTRIES`,
-        alignment:     alignmentType,
-        status:        'SIGNAL',
-        signal_time:   Date.now(),
-        entry_time:    null,
-        result_time:   null,
-        entry_tf:      tf,
+        entry:           parseFloat(entry) || entry,
+        sl:              parseFloat(sl)    || sl,
+        tp:              parseFloat(tp)    || tp,
+        rr:              parseFloat(rr)    || rr,
+        channel:         `${tf}_ENTRIES`,
+        alignment:       alignmentType,
+        align_combos:    alignCombos || [],
+        align_count:     alignCount || 0,
+        status:          'SIGNAL',
+        signal_time:     Date.now(),
+        entry_time:      null,
+        result_time:     null,
+        entry_tf:        tf,
         telegram_chat_id:    null,
         telegram_message_id: null,
         telegram_deleted:    false,
@@ -408,7 +453,7 @@ async function recordSignal(symbol, tf, direction, entry, sl, tp, rr, touchedLev
     stats.trades.push(trade);
     if (stats.trades.length > 500) stats.trades = stats.trades.slice(-500);
 
-    console.log(`  [STATS] Signal recorded: ${symbol} ${tf} ${direction} @ ${entry} | Alignment: ${alignmentType}`);
+    console.log(`  [STATS] Signal recorded: ${symbol} ${tf} ${direction} @ ${entry} | Alignment: ${alignmentType} | Combos: ${alignCombos.join(',')}`);
     await saveStats();
     broadcastStats();
     return trade.id;
@@ -452,6 +497,27 @@ async function recordResult(symbol, tf, direction, entry, action) {
         return true;
     } else {
         console.log(`  [STATS] ${action} — no matching trade for ${symbol} ${tf} ${direction} @ ${entry}`);
+        return false;
+    }
+}
+
+async function recordEntryAndResult(symbol, tf, direction, entry, resultAction) {
+    const stats = tradeStats[symbol]?.[tf];
+    if (!stats) {
+        console.log(`  [STATS] ${resultAction} (combo) skipped — no stats for ${symbol} ${tf}`);
+        return false;
+    }
+    const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['SIGNAL', 'ACTIVE'] });
+    if (found) {
+        found.trade.status      = resultAction;
+        found.trade.entry_time  = Date.now();
+        found.trade.result_time = Date.now();
+        console.log(`  [STATS] ENTRY+${resultAction}: ID=${found.trade.id} | ${symbol} ${tf} ${direction} @ ${entry}`);
+        await saveStats();
+        broadcastStats();
+        return true;
+    } else {
+        console.log(`  [STATS] ENTRY+${resultAction} — no matching trade for ${symbol} ${tf} ${direction} @ ${entry}`);
         return false;
     }
 }
@@ -521,9 +587,11 @@ if (savedStats) {
             const s = tradeStats[sym][tf];
             if (!s.trades) s.trades = [];
             s.trades.forEach(t => {
-                if (!t.id)        t.id        = makeTradeId(sym, tf);
-                if (!t.alignment) t.alignment = 'NONE';
-                if (!t.entry_tf)  t.entry_tf  = tf;
+                if (!t.id)            t.id            = makeTradeId(sym, tf);
+                if (!t.alignment)     t.alignment     = 'NONE';
+                if (!t.entry_tf)      t.entry_tf      = tf;
+                if (!t.align_combos)  t.align_combos  = [];
+                if (!t.align_count)   t.align_count   = 0;
             });
         }
     }
@@ -534,7 +602,7 @@ if (savedStats) {
 // API ROUTES
 // ══════════════════════════════════════════════
 app.get('/api/state', (req, res) => res.json({ marketState, activityLog }));
-app.get('/api/stats', (req, res) => res.json({ tradeStats: buildEnrichedStats() }));
+app.get('/api/stats', (req, res) => res.json({ tradeStats: buildEnrichedStats(), alignmentCombos: ALIGNMENT_COMBOS }));
 
 app.get('/api/stream', (req, res) => {
     res.setHeader('Content-Type',      'text/event-stream');
@@ -591,8 +659,14 @@ app.post('/api/delete-stats', async (req, res) => {
 // ══════════════════════════════════════════════
 app.post('/webhook', async (req, res) => {
     const payload = req.body;
-    const isStoryline = payload.state !== undefined && payload.tf !== undefined && payload.type === undefined;
-    const isEntry     = payload.type  !== undefined;
+
+    // ═══ DETECT PAYLOAD TYPE ═══
+    // Storyline: has state + tf, no type, no coin, no action
+    const isStoryline = payload.state !== undefined && payload.tf !== undefined && payload.coin === undefined && payload.action === undefined;
+    // PineScript OB entry: has coin + action
+    const isPineEntry = payload.coin !== undefined && payload.action !== undefined;
+    // Legacy entry format: has type + direction (but no coin)
+    const isLegacyEntry = payload.type !== undefined && payload.coin === undefined;
 
     // ════════════════════════════════════════
     // STORYLINE — 1W / 1D / 4H / 1H / 30M / 15M
@@ -633,7 +707,6 @@ app.post('/webhook', async (req, res) => {
         const { dominantState, bullCount, bearCount, alignCount, partialState, partialCount } = recalculateAlignment(sym);
         console.log(`[ALIGN] ${sym} → God:${dominantState} | Bull:${bullCount}/6 Bear:${bearCount}/6 | Partial:${partialState}(${partialCount}/6)`);
 
-        // God-Mode ON
         if (dominantState !== "NONE" && dominantState !== prev) {
             const now = Date.now();
             marketState[sym].lastAlertedState     = dominantState;
@@ -648,7 +721,6 @@ app.post('/webhook', async (req, res) => {
             console.log(`[GOD ON] ${sym} → ${dominantState}`);
         }
 
-        // God-Mode OFF
         if (dominantState === "NONE" && prev !== "NONE") {
             marketState[sym].lastAlertedState = "NONE";
             let msg  = `<b>⚠️ ALIGNMENT LOST: ${sym}</b>\n\n`;
@@ -660,7 +732,6 @@ app.post('/webhook', async (req, res) => {
             console.log(`[GOD OFF] ${sym} → NONE`);
         }
 
-        // Partial change
         if (dominantState === "NONE" && partialState !== "NONE") {
             const prevPartial = marketState[sym]._lastPartialState || "NONE";
             if (prevPartial !== partialState || (prev !== "NONE" && dominantState === "NONE")) {
@@ -674,7 +745,6 @@ app.post('/webhook', async (req, res) => {
         }
         marketState[sym]._lastPartialState = partialState;
 
-        // Cancel pending trades that lost alignment
         const cancelledCount = await invalidatePendingTrades(sym);
         if (cancelledCount > 0) {
             console.log(`[INVALIDATION] ${sym} → Cancelled ${cancelledCount} pending trade(s)`);
@@ -686,9 +756,171 @@ app.post('/webhook', async (req, res) => {
     }
 
     // ════════════════════════════════════════
-    // ENTRY WEBHOOK — 1M / 3M / 5M
+    // PINESCRIPT OB ENTRY — coin + chart_tf + action
     // ════════════════════════════════════════
-    if (isEntry) {
+    if (isPineEntry) {
+        const sym       = (payload.coin || '').toUpperCase().trim();
+        const direction = (payload.direction || '').toUpperCase().trim();
+        const entry     =  payload.entry;
+        const sl        =  payload.sl;
+        const tp        =  payload.tp;
+        const rr        =  payload.rr;
+        const action    = (payload.action || '').toUpperCase().trim();
+        const entryTf   =  normalizeTf(payload.chart_tf);
+
+        if (!sym || !direction || entry === undefined) {
+            return res.status(400).send("Invalid PineScript Entry Payload");
+        }
+
+        if (!ENTRY_TFS.includes(entryTf)) {
+            console.log(`[PINE ${action}] ${sym} | TF:${entryTf} — IGNORED (only ${ENTRY_TFS.join('/')} accepted)`);
+            return res.status(200).send(`OK — Only ${ENTRY_TFS.join('/')} entries accepted`);
+        }
+
+        console.log(`\n[PINE ${action}] ${sym} | ${direction} | TF:${entryTf} | Entry:${entry} | SL:${sl} | TP:${tp}`);
+
+        // ══════════════════════════════════════
+        // OB_FORMED — New signal
+        // ══════════════════════════════════════
+        if (action === "OB_FORMED") {
+
+            // Check alignment + direction match
+            const alignResult = getAlignmentType(sym, direction);
+
+            if (!alignResult.valid) {
+                console.log(`  ❌ REJECTED: ${sym} ${direction} ${entryTf} | Reason: ${alignResult.reason}`);
+                return res.status(200).send("OK — No alignment, skipped");
+            }
+
+            // Get alignment combos at signal time
+            const alignSummary = getAlignmentSummary(sym, direction);
+
+            console.log(`  ✅ ALIGNED [${alignResult.type}] ${sym} ${direction} ${entryTf} (${alignSummary.count}/6) | Combos: ${alignSummary.combos.join(',')}`);
+
+            // Record to stats with combos
+            const newTradeId = await recordSignal(
+                sym, entryTf, direction, entry, sl, tp, rr,
+                alignResult.type, alignSummary.combos, alignSummary.count
+            );
+
+            // Send to TF-specific Telegram channel
+            const tfsInfo = tfInfoString(sym);
+            let soundTriggered = false;
+            const chatId = TG_CHANNEL_MAP[entryTf]?.();
+
+            if (chatId) {
+                const alignLabel = alignResult.type === 'GOD' ? 'GOD-MODE (6/6)' : `PARTIAL (${alignSummary.count}/6)`;
+                const alignEmoji = alignResult.type === 'GOD' ? '✅' : '⚡';
+                const dirEmoji   = direction === "BULLISH" ? "🟢 🐂" : "🔴 🐻";
+
+                let msg  = `<b>${dirEmoji} ${entryTf} OB SIGNAL: ${sym}</b>\n\n`;
+                msg += `<b>TF:</b>    ${entryTf}\n`;
+                msg += `<b>Entry:</b> <code>${entry}</code>\n`;
+                msg += `<b>SL:</b>    <code>${sl}</code>\n`;
+                if (tp) msg += `<b>TP:</b>    <code>${tp}</code>\n`;
+                if (rr) msg += `<b>R:R:</b>   ${rr}\n`;
+                msg += `\n${alignEmoji} <b>${alignLabel}</b>\n`;
+                msg += `<b>Combos:</b> ${alignSummary.combos.length > 0 ? alignSummary.combos.join(', ') : 'None'}\n`;
+                msg += `${tfsInfo}`;
+
+                const sent = await sendTelegramTracked(chatId, msg);
+                if (sent.ok) {
+                    soundTriggered = true;
+                    const s = tradeStats[sym]?.[entryTf];
+                    if (s) {
+                        const t = s.trades.find(t => t.id === newTradeId);
+                        if (t) {
+                            t.telegram_chat_id    = chatId;
+                            t.telegram_message_id = sent.messageId;
+                            await saveStats();
+                            broadcastStats();
+                        }
+                    }
+                    console.log(`  ✅ [${entryTf} ENTRIES] Telegram sent → ${sym} | msg_id=${sent.messageId}`);
+                }
+            } else {
+                console.log(`  ⚠️ No Telegram channel configured for ${entryTf}`);
+            }
+
+            if (soundTriggered) broadcastSoundAlert(sym, direction);
+
+            await pushLogEvent(
+                sym, direction,
+                `OB ${entryTf} [${alignResult.type} ${alignSummary.count}/6] Entry:${entry} SL:${sl}`,
+                Date.now()
+            );
+            broadcastAll();
+            return res.status(200).send("OK");
+        }
+
+        // ══════════════════════════════════════
+        // ENTRY_DONE — Entry filled
+        // ══════════════════════════════════════
+        if (action === "ENTRY_DONE") {
+            const updated = await recordEntryFilled(sym, entryTf, direction, entry);
+            if (updated) {
+                await pushLogEvent(sym, direction, `📥 ENTRY FILLED: OB ${entryTf} @ ${entry}`, Date.now());
+                broadcastAll();
+            }
+            return res.status(200).send("OK");
+        }
+
+        // ══════════════════════════════════════
+        // ENTRY_AND_SL_HIT — Entry + immediate SL (counts as SL)
+        // ══════════════════════════════════════
+        if (action === "ENTRY_AND_SL_HIT") {
+            const updated = await recordEntryAndResult(sym, entryTf, direction, entry, 'SL_HIT');
+            if (updated) {
+                await pushLogEvent(sym, 'BEARISH', `💀 ENTRY+SL HIT: OB ${entryTf} @ ${entry}`, Date.now());
+                broadcastAll();
+            }
+            return res.status(200).send("OK");
+        }
+
+        // ══════════════════════════════════════
+        // ENTRY_AND_TP_HIT — Entry + immediate TP (counts as TP)
+        // ══════════════════════════════════════
+        if (action === "ENTRY_AND_TP_HIT") {
+            const updated = await recordEntryAndResult(sym, entryTf, direction, entry, 'TP_HIT');
+            if (updated) {
+                await pushLogEvent(sym, 'BULLISH', `🎯 ENTRY+TP HIT: OB ${entryTf} @ ${entry}`, Date.now());
+                broadcastAll();
+            }
+            return res.status(200).send("OK");
+        }
+
+        // ══════════════════════════════════════
+        // TP_HIT
+        // ══════════════════════════════════════
+        if (action === "TP_HIT") {
+            const updated = await recordResult(sym, entryTf, direction, entry, 'TP_HIT');
+            if (updated) {
+                await pushLogEvent(sym, 'BULLISH', `🎯 TP HIT: OB ${entryTf} @ ${entry}`, Date.now());
+                broadcastAll();
+            }
+            return res.status(200).send("OK");
+        }
+
+        // ══════════════════════════════════════
+        // SL_HIT
+        // ══════════════════════════════════════
+        if (action === "SL_HIT") {
+            const updated = await recordResult(sym, entryTf, direction, entry, 'SL_HIT');
+            if (updated) {
+                await pushLogEvent(sym, 'BEARISH', `💀 SL HIT: OB ${entryTf} @ ${entry}`, Date.now());
+                broadcastAll();
+            }
+            return res.status(200).send("OK");
+        }
+
+        console.warn(`[PINE] Unknown action: ${action}`);
+        return res.status(400).send("Unknown action");
+    }
+
+    // ════════════════════════════════════════
+    // LEGACY ENTRY FORMAT (type-based)
+    // ════════════════════════════════════════
+    if (isLegacyEntry) {
         const sym          = (payload.symbol    || '').toUpperCase().trim();
         const type         =  payload.type      || '';
         const direction    = (payload.direction || '').toUpperCase().trim();
@@ -704,42 +936,33 @@ app.post('/webhook', async (req, res) => {
             return res.status(400).send("Invalid Entry Payload");
         }
 
-        // ═══ REJECT non 1M/3M/5M entries ═══
         if (!ENTRY_TFS.includes(entryTf)) {
             console.log(`[${action}] ${sym} | TF:${entryTf} — IGNORED (only ${ENTRY_TFS.join('/')} accepted)`);
             return res.status(200).send(`OK — Only ${ENTRY_TFS.join('/')} entries accepted`);
         }
 
-        console.log(`\n[${action}] ${sym} | ${type} | ${direction} | TF:${entryTf} | Entry:${entry}`);
+        console.log(`\n[LEGACY ${action}] ${sym} | ${type} | ${direction} | TF:${entryTf} | Entry:${entry}`);
 
-        // ══════════════════════════════════════
-        // SIGNAL
-        // ══════════════════════════════════════
         if (action === "SIGNAL") {
-
-            // Step 1: Check alignment
             const alignResult = getAlignmentType(sym, direction);
-
             if (!alignResult.valid) {
                 console.log(`  ❌ REJECTED: ${sym} ${direction} ${entryTf} | Reason: ${alignResult.reason}`);
                 return res.status(200).send("OK — No alignment, skipped");
             }
 
-            console.log(`  ✅ ALIGNED [${alignResult.type}] ${sym} ${direction} ${entryTf} (${alignResult.alignCount}/6)`);
+            const alignSummary = getAlignmentSummary(sym, direction);
 
-            // Step 2: Record to stats
             const newTradeId = await recordSignal(
-                sym, entryTf, direction, entry, sl, tp, rr, touchedLevel,
-                alignResult.type, type
+                sym, entryTf, direction, entry, sl, tp, rr,
+                alignResult.type, alignSummary.combos, alignSummary.count
             );
 
-            // Step 3: Send to TF-specific Telegram channel
             const tfsInfo = tfInfoString(sym);
             let soundTriggered = false;
             const chatId = TG_CHANNEL_MAP[entryTf]?.();
 
             if (chatId) {
-                const alignLabel = alignResult.type === 'GOD' ? 'GOD-MODE (6/6)' : `PARTIAL (${alignResult.alignCount}/6)`;
+                const alignLabel = alignResult.type === 'GOD' ? 'GOD-MODE (6/6)' : `PARTIAL (${alignSummary.count}/6)`;
                 const alignEmoji = alignResult.type === 'GOD' ? '✅' : '⚡';
                 const dirEmoji   = direction === "BULLISH" ? "🟢 🐂" : "🔴 🐻";
 
@@ -766,26 +989,20 @@ app.post('/webhook', async (req, res) => {
                             broadcastStats();
                         }
                     }
-                    console.log(`  ✅ [${entryTf} ENTRIES] Telegram sent → ${sym} | msg_id=${sent.messageId}`);
                 }
-            } else {
-                console.log(`  ⚠️ No Telegram channel configured for ${entryTf}`);
             }
 
             if (soundTriggered) broadcastSoundAlert(sym, direction);
 
             await pushLogEvent(
                 sym, direction,
-                `${type} ${entryTf} [${alignResult.type} ${alignResult.alignCount}/6] Entry:${entry} SL:${sl}`,
+                `${type} ${entryTf} [${alignResult.type} ${alignSummary.count}/6] Entry:${entry} SL:${sl}`,
                 Date.now()
             );
             broadcastAll();
             return res.status(200).send("OK");
         }
 
-        // ══════════════════════════════════════
-        // ENTRY_FILLED
-        // ══════════════════════════════════════
         if (action === "ENTRY_FILLED") {
             const updated = await recordEntryFilled(sym, entryTf, direction, entry);
             if (updated) {
@@ -795,9 +1012,6 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ══════════════════════════════════════
-        // TP_HIT
-        // ══════════════════════════════════════
         if (action === "TP_HIT") {
             const updated = await recordResult(sym, entryTf, direction, entry, 'TP_HIT');
             if (updated) {
@@ -807,9 +1021,6 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ══════════════════════════════════════
-        // SL_HIT
-        // ══════════════════════════════════════
         if (action === "SL_HIT") {
             const updated = await recordResult(sym, entryTf, direction, entry, 'SL_HIT');
             if (updated) {
@@ -819,18 +1030,12 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        console.warn(`[ENTRY] Unknown action: ${action}`);
+        console.warn(`[LEGACY] Unknown action: ${action}`);
         return res.status(400).send("Unknown action");
     }
 
     return res.status(400).send("Unknown payload");
 });
-
-// ══════════════════════════════════════════════
-// PAGE ROUTES
-// ══════════════════════════════════════════════
-app.get('/',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/stats', (req, res) => res.sendFile(path.join(__dirname, 'public', 'stats.html')));
 
 // ══════════════════════════════════════════════
 // FILTERED ALIGNMENT API ENDPOINTS
@@ -875,9 +1080,10 @@ app.get('/dh1h',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'dh1
 // START
 // ══════════════════════════════════════════════
 app.listen(PORT, () => {
-    console.log(`\n🚀 God-Mode V5 on port ${PORT}`);
+    console.log(`\n🚀 God-Mode V6 on port ${PORT}`);
     console.log(`📊 Alignment: ${GOD_THRESHOLD}/6 = GOD, ${PARTIAL_THRESHOLD}/6 = PARTIAL (${ZONE_TIMEFRAMES.join(' + ')})`);
     console.log(`📡 Entry TFs: ${ENTRY_TFS.join(', ')}`);
+    console.log(`📡 Alignment Combos: ${ALIGNMENT_COMBOS.length} tracked`);
     console.log(`📡 1M Entries: ${TG_1M_ENTRIES || 'NOT SET'}`);
     console.log(`📡 3M Entries: ${TG_3M_ENTRIES || 'NOT SET'}`);
     console.log(`📡 5M Entries: ${TG_5M_ENTRIES || 'NOT SET'}`);
