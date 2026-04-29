@@ -833,6 +833,45 @@ app.get('/',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'ind
 app.get('/stats', (req, res) => res.sendFile(path.join(__dirname, 'public', 'stats.html')));
 
 // ══════════════════════════════════════════════
+// FILTERED ALIGNMENT API ENDPOINTS
+// ══════════════════════════════════════════════
+app.get('/api/filtered-state/wdh', (req, res) => {
+    const filtered = {};
+    for (const sym in marketState) {
+        const tfs = marketState[sym].timeframes || {};
+        const w = tfs['1W'] || 'NONE';
+        const d = tfs['1D'] || 'NONE';
+        const h4 = tfs['4H'] || 'NONE';
+        if (w !== 'NONE' && w === d && d === h4) {
+            filtered[sym] = { ...marketState[sym], filterDirection: w };
+        }
+    }
+    res.json({ marketState: filtered, activityLog });
+});
+
+app.get('/api/filtered-state/dh1h', (req, res) => {
+    const filtered = {};
+    for (const sym in marketState) {
+        const tfs = marketState[sym].timeframes || {};
+        const d = tfs['1D'] || 'NONE';
+        const h4 = tfs['4H'] || 'NONE';
+        const h1 = tfs['1H'] || 'NONE';
+        if (d !== 'NONE' && d === h4 && h4 === h1) {
+            filtered[sym] = { ...marketState[sym], filterDirection: d };
+        }
+    }
+    res.json({ marketState: filtered, activityLog });
+});
+
+// ══════════════════════════════════════════════
+// PAGE ROUTES
+// ══════════════════════════════════════════════
+app.get('/',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/stats', (req, res) => res.sendFile(path.join(__dirname, 'public', 'stats.html')));
+app.get('/wdh',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'wdh.html')));
+app.get('/dh1h',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'dh1h.html')));
+
+// ══════════════════════════════════════════════
 // START
 // ══════════════════════════════════════════════
 app.listen(PORT, () => {
