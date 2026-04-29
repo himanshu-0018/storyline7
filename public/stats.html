@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Statistics — God-Mode v5</title>
+    <title>Trade Statistics — God-Mode v6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
@@ -89,36 +89,52 @@
         .sc-winrate .sc-val { color:#fbbf24; }
         .sc-pending .sc-val { color:#94a3b8; }
 
-        .align-breakdown-global { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px; }
-        .ab-global-card { padding:16px 18px;border-radius:14px;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(10px);position:relative;overflow:hidden; }
-        .ab-global-card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px; }
-        .abg-god::before { background:linear-gradient(90deg,transparent,#10b981,transparent); }
-        .abg-partial::before { background:linear-gradient(90deg,transparent,#f59e0b,transparent); }
-        .ab-global-title { font-family:'Orbitron',sans-serif;font-size:0.72rem;font-weight:700;margin-bottom:10px; }
-        .abg-god .ab-global-title { color:#34d399; }
-        .abg-partial .ab-global-title { color:#fbbf24; }
-        .ab-stats-row { display:flex;align-items:center;gap:14px;flex-wrap:wrap; }
-        .ab-stat-item { display:flex;flex-direction:column;align-items:center;gap:2px; }
-        .ab-stat-val { font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:900;line-height:1; }
-        .ab-stat-lbl { font-family:'JetBrains Mono',monospace;font-size:0.48rem;color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.08em; }
-        .ab-wr-badge { margin-left:auto;padding:6px 12px;border-radius:8px;font-family:'Orbitron',sans-serif;font-size:0.9rem;font-weight:900; }
+        /* ── COMBO BREAKDOWN ── */
+        .combo-section { margin-bottom:16px; }
+        .combo-section-title {
+            font-family:'Orbitron',sans-serif;font-size:0.75rem;font-weight:700;
+            color:#fbbf24;margin-bottom:10px;display:flex;align-items:center;gap:8px;
+        }
+        .combo-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px; }
+        .combo-card {
+            padding:12px;border-radius:12px;background:rgba(15,23,42,0.8);
+            border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(10px);
+            position:relative;overflow:hidden;transition:all 0.2s;
+        }
+        .combo-card:hover { border-color:rgba(255,255,255,0.15);transform:translateY(-1px); }
+        .combo-card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px; }
+        .combo-card.cc-good::before { background:linear-gradient(90deg,transparent,#10b981,transparent); }
+        .combo-card.cc-mid::before { background:linear-gradient(90deg,transparent,#f59e0b,transparent); }
+        .combo-card.cc-bad::before { background:linear-gradient(90deg,transparent,#ef4444,transparent); }
+        .combo-card.cc-na::before { background:linear-gradient(90deg,transparent,#475569,transparent); }
+        .cc-name { font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;color:#e2e8f0;margin-bottom:6px; }
+        .cc-stats-row { display:flex;gap:10px;align-items:center;flex-wrap:wrap; }
+        .cc-stat { display:flex;flex-direction:column;align-items:center; }
+        .cc-stat-val { font-family:'Orbitron',sans-serif;font-size:0.9rem;font-weight:900;line-height:1; }
+        .cc-stat-lbl { font-family:'JetBrains Mono',monospace;font-size:0.4rem;color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px; }
+        .cc-wr { margin-left:auto;font-family:'Orbitron',sans-serif;font-size:0.85rem;font-weight:900;padding:4px 10px;border-radius:6px; }
         .wr-good { background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#34d399; }
         .wr-mid  { background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24; }
         .wr-bad  { background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171; }
         .wr-na   { background:rgba(71,85,105,0.2);border:1px solid rgba(71,85,105,0.4);color:#64748b; }
+        .cc-bar { margin-top:6px;height:4px;border-radius:2px;overflow:hidden;background:rgba(255,255,255,0.06); }
+        .cc-bar-fill { height:100%;border-radius:2px;transition:width 0.5s ease; }
+        .cc-bar-fill.good { background:linear-gradient(90deg,#10b981,#34d399); }
+        .cc-bar-fill.mid { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+        .cc-bar-fill.bad { background:linear-gradient(90deg,#ef4444,#f87171); }
 
+        /* ── FILTERS ── */
         .filter-section { display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;padding:12px 16px;border-radius:12px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06); }
-        .filter-group { display:flex;align-items:center;gap:8px; }
+        .filter-group { display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
         .filter-group-label { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.1em;white-space:nowrap; }
-        .filter-btn { padding:5px 12px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:700;cursor:pointer;transition:all 0.2s;border:1px solid;letter-spacing:0.04em;white-space:nowrap; }
+        .filter-btn { padding:4px 10px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.58rem;font-weight:700;cursor:pointer;transition:all 0.2s;border:1px solid;letter-spacing:0.04em;white-space:nowrap; }
         .filter-btn.active-tf { background:linear-gradient(135deg,rgba(14,165,233,0.3),rgba(56,189,248,0.15));border-color:rgba(56,189,248,0.6);color:#7dd3fc;box-shadow:0 0 12px rgba(56,189,248,0.15); }
-        .filter-btn.active-align-all { background:linear-gradient(135deg,rgba(99,102,241,0.3),rgba(165,180,252,0.15));border-color:rgba(165,180,252,0.6);color:#c7d2fe;box-shadow:0 0 12px rgba(99,102,241,0.15); }
-        .filter-btn.active-align-god { background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(52,211,153,0.15));border-color:rgba(52,211,153,0.6);color:#6ee7b7;box-shadow:0 0 12px rgba(16,185,129,0.15); }
-        .filter-btn.active-align-partial { background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(251,191,36,0.15));border-color:rgba(251,191,36,0.6);color:#fde68a;box-shadow:0 0 12px rgba(245,158,11,0.15); }
+        .filter-btn.active-combo { background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(251,191,36,0.15));border-color:rgba(251,191,36,0.6);color:#fde68a;box-shadow:0 0 12px rgba(245,158,11,0.15); }
         .filter-btn:not([class*="active"]) { background:rgba(30,41,59,0.6);border-color:rgba(71,85,105,0.4);color:#64748b; }
         .filter-btn:not([class*="active"]):hover { border-color:rgba(100,116,139,0.6);color:#94a3b8; }
         .filter-divider { width:1px;height:24px;background:rgba(255,255,255,0.08); }
 
+        /* ── COIN CARDS ── */
         .coin-stats-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:16px; }
         .coin-stats-card { border-radius:16px;padding:18px;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(10px);position:relative;overflow:hidden; }
         .coin-stats-card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(245,158,11,0.5),rgba(251,191,36,0.5),transparent); }
@@ -134,23 +150,6 @@
         .tf-table td:first-child { text-align:left;color:rgba(203,213,225,0.7); }
         .td-signals { color:#38bdf8; } .td-entries { color:#a78bfa; } .td-tp { color:#34d399; } .td-sl { color:#f87171; } .td-wr { color:#fbbf24; } .td-active { color:#94a3b8; }
 
-        .coin-align-breakdown { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px; }
-        .cab-cell { padding:10px;border-radius:10px;font-family:'JetBrains Mono',monospace; }
-        .cab-god { background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2); }
-        .cab-partial { background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2); }
-        .cab-title { font-size:0.5rem;font-weight:700;letter-spacing:0.08em;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between; }
-        .cab-god .cab-title { color:#34d399; } .cab-partial .cab-title { color:#fbbf24; }
-        .cab-stats { display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px; }
-        .cab-stat { display:flex;flex-direction:column;align-items:center;padding:4px;border-radius:6px;background:rgba(0,0,0,0.2); }
-        .cab-stat-val { font-size:0.85rem;font-weight:800;line-height:1; }
-        .cab-stat-lbl { font-size:0.42rem;color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px; }
-        .cab-wr-bar { margin-top:6px;height:4px;border-radius:2px;overflow:hidden;background:rgba(255,255,255,0.06); }
-        .cab-wr-fill { height:100%;border-radius:2px;transition:width 0.5s ease; }
-        .cab-god .cab-wr-fill { background:linear-gradient(90deg,#10b981,#34d399); }
-        .cab-partial .cab-wr-fill { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
-        .cab-wr-label { font-size:0.5rem;font-weight:700;margin-top:3px;text-align:right; }
-        .cab-god .cab-wr-label { color:#34d399; } .cab-partial .cab-wr-label { color:#fbbf24; }
-
         .recent-header { font-family:'JetBrains Mono',monospace;font-size:0.5rem;font-weight:700;color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-top:12px;margin-bottom:6px; }
         .trade-row { display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;margin-bottom:3px;font-family:'JetBrains Mono',monospace;font-size:0.55rem; }
         .tr-tp { background:rgba(16,185,129,0.08);border-left:2px solid #10b981; }
@@ -162,9 +161,11 @@
         .align-tag-partial { background:rgba(245,158,11,0.2);color:#fbbf24;border:1px solid rgba(245,158,11,0.3); }
         .align-tag-none { background:rgba(71,85,105,0.2);color:#64748b;border:1px solid rgba(71,85,105,0.3); }
         .tf-tag { font-size:0.42rem;font-weight:700;padding:2px 5px;border-radius:4px;letter-spacing:0.06em;white-space:nowrap;background:rgba(14,165,233,0.15);color:#38bdf8;border:1px solid rgba(14,165,233,0.3); }
+        .combo-tag { font-size:0.38rem;font-weight:700;padding:1px 4px;border-radius:3px;letter-spacing:0.04em;white-space:nowrap;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3); }
 
         .empty-stats { font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:rgba(148,163,184,0.3);text-align:center;padding:60px 20px;grid-column:1/-1; }
 
+        /* ── MODAL ── */
         .modal-backdrop { position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:16px; }
         .modal-box { background:linear-gradient(135deg,rgba(10,14,26,0.98),rgba(15,20,40,0.98));border:1px solid rgba(239,68,68,0.3);border-radius:20px;padding:28px;width:100%;max-width:440px;position:relative;box-shadow:0 0 60px rgba(239,68,68,0.2),0 40px 80px rgba(0,0,0,0.6); }
         .modal-box::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,transparent,rgba(239,68,68,0.6),rgba(248,113,113,0.6),transparent); }
@@ -198,7 +199,7 @@
                 display:flex;align-items:center;justify-content:center;font-size:1.3rem;">📊</div>
             <div>
                 <div class="brand-name">TRADE STATISTICS</div>
-                <div class="brand-sub">ENTRY / TP / SL · PER COIN · 1M / 3M / 5M · GOD (6/6) vs PARTIAL (5/6)</div>
+                <div class="brand-sub">OB ENTRIES · PER COIN · 1M / 3M / 5M · ALIGNMENT COMBO BREAKDOWN</div>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -209,6 +210,7 @@
     </div>
 
     <div class="main-content">
+        <!-- GLOBAL SUMMARY -->
         <div class="summary-row">
             <div class="summary-card sc-signals"><div class="sc-val" id="gSignals">0</div><div class="sc-label">Total Signals</div></div>
             <div class="summary-card sc-entries"><div class="sc-val" id="gEntries">0</div><div class="sc-label">Entries</div></div>
@@ -218,30 +220,16 @@
             <div class="summary-card sc-pending"><div class="sc-val" id="gPending">0</div><div class="sc-label">Active/Pending</div></div>
         </div>
 
-        <div class="align-breakdown-global">
-            <div class="ab-global-card abg-god">
-                <div class="ab-global-title">✅ GOD-MODE (6/6) — All Coins</div>
-                <div class="ab-stats-row">
-                    <div class="ab-stat-item"><div class="ab-stat-val" id="gGodSig" style="color:#38bdf8;">0</div><div class="ab-stat-lbl">Signals</div></div>
-                    <div class="ab-stat-item"><div class="ab-stat-val" id="gGodTP" style="color:#34d399;">0</div><div class="ab-stat-lbl">TP Hits</div></div>
-                    <div class="ab-stat-item"><div class="ab-stat-val" id="gGodSL" style="color:#f87171;">0</div><div class="ab-stat-lbl">SL Hits</div></div>
-                    <div class="ab-wr-badge wr-na" id="gGodWR">N/A</div>
-                </div>
-            </div>
-            <div class="ab-global-card abg-partial">
-                <div class="ab-global-title">⚡ PARTIAL (5/6) — All Coins</div>
-                <div class="ab-stats-row">
-                    <div class="ab-stat-item"><div class="ab-stat-val" id="gPartSig" style="color:#38bdf8;">0</div><div class="ab-stat-lbl">Signals</div></div>
-                    <div class="ab-stat-item"><div class="ab-stat-val" id="gPartTP" style="color:#34d399;">0</div><div class="ab-stat-lbl">TP Hits</div></div>
-                    <div class="ab-stat-item"><div class="ab-stat-val" id="gPartSL" style="color:#f87171;">0</div><div class="ab-stat-lbl">SL Hits</div></div>
-                    <div class="ab-wr-badge wr-na" id="gPartWR">N/A</div>
-                </div>
-            </div>
+        <!-- COMBO BREAKDOWN -->
+        <div class="combo-section">
+            <div class="combo-section-title">📊 ALIGNMENT COMBO PERFORMANCE</div>
+            <div class="combo-grid" id="comboGrid"></div>
         </div>
 
+        <!-- FILTERS -->
         <div class="filter-section">
             <div class="filter-group">
-                <span class="filter-group-label">TF:</span>
+                <span class="filter-group-label">ENTRY TF:</span>
                 <button class="filter-btn active-tf" id="tf-ALL" onclick="setTfFilter('ALL',this)">ALL</button>
                 <button class="filter-btn" id="tf-1M" onclick="setTfFilter('1M',this)">1M</button>
                 <button class="filter-btn" id="tf-3M" onclick="setTfFilter('3M',this)">3M</button>
@@ -249,18 +237,19 @@
             </div>
             <div class="filter-divider"></div>
             <div class="filter-group">
-                <span class="filter-group-label">ALIGN:</span>
-                <button class="filter-btn active-align-all" id="al-ALL" onclick="setAlignFilter('ALL',this)">ALL</button>
-                <button class="filter-btn" id="al-GOD" onclick="setAlignFilter('GOD',this)">✅ GOD (6/6)</button>
-                <button class="filter-btn" id="al-PARTIAL" onclick="setAlignFilter('PARTIAL',this)">⚡ PARTIAL (5/6)</button>
+                <span class="filter-group-label">ALIGNMENT:</span>
+                <button class="filter-btn active-combo" id="co-ALL" onclick="setComboFilter('ALL',this)">ALL</button>
+                <div id="comboFilterBtns"></div>
             </div>
         </div>
 
+        <!-- COIN STATS -->
         <div class="coin-stats-grid" id="statsGrid">
             <div class="empty-stats">Connecting to live feed...</div>
         </div>
     </div>
 
+    <!-- CLEAR MODAL -->
     <div class="modal-backdrop" id="clearModal">
         <div class="modal-box">
             <div class="modal-title">🗑️ Clear Trade Statistics</div>
@@ -277,9 +266,31 @@
 
     <script>
         let currentStats = {};
-        let currentAlign = 'ALL';
+        let currentComboFilter = 'ALL';
         let currentTfFilter = 'ALL';
         const ENTRY_TFS = ['1M', '3M', '5M'];
+
+        const ALIGNMENT_COMBOS = [
+            { id: "W_D_4H",             label: "W+D+4H" },
+            { id: "W_D_4H_1H",          label: "W+D+4H+1H" },
+            { id: "W_D_4H_1H_30M",      label: "W+D+4H+1H+30M" },
+            { id: "W_D_4H_1H_30M_15M",  label: "W+D+4H+1H+30M+15M" },
+            { id: "D_4H",               label: "D+4H" },
+            { id: "D_4H_1H",            label: "D+4H+1H" },
+            { id: "D_4H_1H_30M",        label: "D+4H+1H+30M" },
+            { id: "D_4H_1H_30M_15M",    label: "D+4H+1H+30M+15M" },
+            { id: "4H_1H",              label: "4H+1H" },
+            { id: "4H_1H_30M",          label: "4H+1H+30M" },
+            { id: "4H_1H_30M_15M",      label: "4H+1H+30M+15M" }
+        ];
+
+        // Build combo filter buttons
+        (function buildComboButtons() {
+            const container = document.getElementById('comboFilterBtns');
+            container.innerHTML = ALIGNMENT_COMBOS.map(c =>
+                `<button class="filter-btn" id="co-${c.id}" onclick="setComboFilter('${c.id}',this)" style="margin:2px;">${c.label}</button>`
+            ).join('');
+        })();
 
         const openClearModal  = () => document.getElementById('clearModal').style.display='flex';
         const closeClearModal = () => { document.getElementById('clearModal').style.display='none'; document.getElementById('clearSymbol').value=''; };
@@ -297,10 +308,10 @@
             closeClearModal();
         }
 
-        function setAlignFilter(align, btn) {
-            currentAlign = align;
-            document.querySelectorAll('[id^="al-"]').forEach(b => b.className = 'filter-btn');
-            btn.className = `filter-btn active-align-${align.toLowerCase()}`;
+        function setComboFilter(combo, btn) {
+            currentComboFilter = combo;
+            document.querySelectorAll('[id^="co-"]').forEach(b => b.className = 'filter-btn');
+            btn.className = 'filter-btn active-combo';
             renderStats();
         }
 
@@ -317,23 +328,22 @@
             return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' '
                  + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
         }
+
         function calcWR(tp, sl) {
             const t = tp + sl;
             if (t === 0) return { txt:'N/A', pct:0, cls:'wr-na' };
             const p = parseFloat(((tp/t)*100).toFixed(1));
             return { txt:p+'%', pct:p, cls: p>=60?'wr-good':p<40?'wr-bad':'wr-mid' };
         }
+
         function alignTag(a) {
             if (a==='GOD')     return '<span class="align-tag align-tag-god">GOD</span>';
             if (a==='PARTIAL') return '<span class="align-tag align-tag-partial">5/6</span>';
             return '<span class="align-tag align-tag-none">—</span>';
         }
-        function tfTag(tf) {
-            return `<span class="tf-tag">${tf}</span>`;
-        }
+        function tfTag(tf) { return `<span class="tf-tag">${tf}</span>`; }
         function wrBadge(wr) { return `<span class="csc-wr ${wr.cls}">${wr.txt}</span>`; }
 
-        // Gather all trades from all entry TFs for a symbol
         function getAllTrades(sym) {
             let all = [];
             ENTRY_TFS.forEach(tf => {
@@ -345,47 +355,81 @@
             return all;
         }
 
-        // Filter: exclude cancelled, then by TF, then by alignment
         function filterTrades(trades) {
             let result = trades.filter(t => t.status !== 'CANCELLED');
             if (currentTfFilter !== 'ALL') {
                 result = result.filter(t => (t._tf || t.entry_tf) === currentTfFilter);
             }
-            if (currentAlign !== 'ALL') {
-                result = result.filter(t => (t.alignment || 'NONE') === currentAlign);
+            if (currentComboFilter !== 'ALL') {
+                result = result.filter(t => {
+                    const combos = t.align_combos || [];
+                    return combos.includes(currentComboFilter);
+                });
             }
             return result;
         }
 
-        // Count from already-filtered trades
         function countFromTrades(trades) {
             let sig=0, ent=0, tp=0, sl=0, pend=0, act=0;
-            let godSig=0, godTP=0, godSL=0;
-            let partSig=0, partTP=0, partSL=0;
             for (const t of trades) {
                 if (t.status === 'CANCELLED') continue;
-                const a = t.alignment || 'NONE';
                 sig++;
                 if (t.status==='ACTIVE')  { ent++; act++; }
                 if (t.status==='TP_HIT')  { ent++; tp++; }
                 if (t.status==='SL_HIT')  { ent++; sl++; }
                 if (t.status==='SIGNAL')  pend++;
-                if (a==='GOD') { godSig++; if(t.status==='TP_HIT') godTP++; if(t.status==='SL_HIT') godSL++; }
-                else if (a==='PARTIAL') { partSig++; if(t.status==='TP_HIT') partTP++; if(t.status==='SL_HIT') partSL++; }
             }
-            return { sig, ent, tp, sl, pend, act, godSig, godTP, godSL, partSig, partTP, partSL };
+            return { sig, ent, tp, sl, pend, act };
+        }
+
+        function countByCombo(allTrades, comboId) {
+            const filtered = allTrades.filter(t => {
+                if (t.status === 'CANCELLED') return false;
+                const combos = t.align_combos || [];
+                return combos.includes(comboId);
+            });
+            return countFromTrades(filtered);
+        }
+
+        function renderComboBreakdown(allGlobalTrades) {
+            const grid = document.getElementById('comboGrid');
+            grid.innerHTML = '';
+
+            ALIGNMENT_COMBOS.forEach(combo => {
+                const c = countByCombo(allGlobalTrades, combo.id);
+                const wr = calcWR(c.tp, c.sl);
+                const barCls = wr.pct >= 60 ? 'good' : wr.pct < 40 ? 'bad' : 'mid';
+                const cardCls = wr.pct >= 60 ? 'cc-good' : wr.pct < 40 && (c.tp+c.sl)>0 ? 'cc-bad' : (c.tp+c.sl)>0 ? 'cc-mid' : 'cc-na';
+
+                grid.insertAdjacentHTML('beforeend', `
+                    <div class="combo-card ${cardCls}">
+                        <div class="cc-name">${combo.label}</div>
+                        <div class="cc-stats-row">
+                            <div class="cc-stat"><div class="cc-stat-val" style="color:#38bdf8;">${c.sig}</div><div class="cc-stat-lbl">Signals</div></div>
+                            <div class="cc-stat"><div class="cc-stat-val" style="color:#34d399;">${c.tp}</div><div class="cc-stat-lbl">TP</div></div>
+                            <div class="cc-stat"><div class="cc-stat-val" style="color:#f87171;">${c.sl}</div><div class="cc-stat-lbl">SL</div></div>
+                            <div class="cc-wr ${wr.cls}">${wr.txt}</div>
+                        </div>
+                        <div class="cc-bar"><div class="cc-bar-fill ${barCls}" style="width:${Math.min(wr.pct||0,100)}%"></div></div>
+                    </div>
+                `);
+            });
         }
 
         function renderStats() {
             const grid = document.getElementById('statsGrid');
             const symbols = Object.keys(currentStats).sort();
 
-            // Collect all trades across all symbols
             let allGlobal = [];
             symbols.forEach(sym => {
                 allGlobal = allGlobal.concat(getAllTrades(sym));
             });
 
+            // Combo breakdown uses ALL alive trades (no filters)
+            const allAlive = allGlobal.filter(t => t.status !== 'CANCELLED');
+            renderComboBreakdown(allAlive);
+
+            // Filtered stats for summary + cards
             const filteredGlobal = filterTrades(allGlobal);
             const gc = countFromTrades(filteredGlobal);
             const gwr = calcWR(gc.tp, gc.sl);
@@ -397,27 +441,6 @@
             document.getElementById('gWR').textContent      = gwr.txt;
             document.getElementById('gPending').textContent = gc.pend + gc.act;
 
-            // God/Partial global (always from all alive trades, no filter)
-            const allAlive = allGlobal.filter(t => t.status !== 'CANCELLED');
-            const gcAll = countFromTrades(allAlive);
-            const godWR  = calcWR(gcAll.godTP, gcAll.godSL);
-            const partWR = calcWR(gcAll.partTP, gcAll.partSL);
-
-            document.getElementById('gGodSig').textContent = gcAll.godSig;
-            document.getElementById('gGodTP').textContent  = gcAll.godTP;
-            document.getElementById('gGodSL').textContent  = gcAll.godSL;
-            const gGodWRel = document.getElementById('gGodWR');
-            gGodWRel.textContent = godWR.txt;
-            gGodWRel.className = `ab-wr-badge ${godWR.cls}`;
-
-            document.getElementById('gPartSig').textContent = gcAll.partSig;
-            document.getElementById('gPartTP').textContent  = gcAll.partTP;
-            document.getElementById('gPartSL').textContent  = gcAll.partSL;
-            const gPartWRel = document.getElementById('gPartWR');
-            gPartWRel.textContent = partWR.txt;
-            gPartWRel.className = `ab-wr-badge ${partWR.cls}`;
-
-            // Filter symbols that have trades after filtering
             const filteredSyms = symbols.filter(sym => {
                 const trades = getAllTrades(sym);
                 return filterTrades(trades).length > 0;
@@ -444,17 +467,12 @@
                 const c = countFromTrades(filtered);
                 const wr = calcWR(c.tp, c.sl);
 
-                // Alignment breakdown (from all alive trades for this sym, unfiltered)
-                const allAlive = allSymTrades.filter(t => t.status !== 'CANCELLED');
-                const rc = countFromTrades(allAlive);
-                const godWr  = calcWR(rc.godTP, rc.godSL);
-                const partWr = calcWR(rc.partTP, rc.partSL);
-
-                // Per-TF table rows
+                // Per-TF table
                 let tfTableRows = '';
                 ENTRY_TFS.forEach(tf => {
-                    const tfTrades = allSymTrades.filter(t => t.status !== 'CANCELLED' && (t._tf || t.entry_tf) === tf);
                     if (currentTfFilter !== 'ALL' && currentTfFilter !== tf) return;
+                    const tfTrades = filterTrades(allSymTrades.filter(t => (t._tf || t.entry_tf) === tf));
+                    if (tfTrades.length === 0 && currentTfFilter === 'ALL') return;
                     const tc = countFromTrades(tfTrades);
                     const twr = calcWR(tc.tp, tc.sl);
                     tfTableRows += `<tr>
@@ -483,11 +501,13 @@
                     const di = t.direction==='BULLISH'?'🐂':'🐻';
                     const tm = fmtTime(t.result_time||t.entry_time||t.signal_time);
                     const stc = t.status==='TP_HIT'?'#34d399':t.status==='SL_HIT'?'#f87171':'#94a3b8';
+                    const combos = (t.align_combos||[]).slice(0,2).map(c => `<span class="combo-tag">${c}</span>`).join('');
                     recentHTML += `<div class="trade-row ${cls}">
                         <span>${icon}</span>
                         <span>${di}</span>
                         ${tfTag(t._tf || t.entry_tf || '?')}
                         ${alignTag(t.alignment||'NONE')}
+                        ${combos}
                         <span style="color:#38bdf8;">${t.entry}</span>
                         <span style="color:${stc};font-weight:700;">${stxt}</span>
                         <span style="margin-left:auto;color:rgba(148,163,184,0.35);font-size:0.47rem;">${tm}</span>
@@ -500,46 +520,20 @@
                             <span class="csc-symbol">${sym}</span>
                             <div class="csc-badges">${wrBadge(wr)}</div>
                         </div>
-
                         <table class="tf-table">
                             <thead><tr>
                                 <th>TF</th><th>Signals</th><th>Entries</th>
                                 <th>TP ✅</th><th>SL ❌</th><th>Win%</th><th>Live</th>
                             </tr></thead>
-                            <tbody>
-                                ${tfTableRows}
-                            </tbody>
+                            <tbody>${tfTableRows}</tbody>
                         </table>
-
-                        <div class="coin-align-breakdown">
-                            <div class="cab-cell cab-god">
-                                <div class="cab-title"><span>✅ GOD-MODE (6/6)</span></div>
-                                <div class="cab-stats">
-                                    <div class="cab-stat"><div class="cab-stat-val" style="color:#38bdf8;">${rc.godSig}</div><div class="cab-stat-lbl">Signals</div></div>
-                                    <div class="cab-stat"><div class="cab-stat-val" style="color:#34d399;">${rc.godTP}</div><div class="cab-stat-lbl">TP Hits</div></div>
-                                    <div class="cab-stat"><div class="cab-stat-val" style="color:#f87171;">${rc.godSL}</div><div class="cab-stat-lbl">SL Hits</div></div>
-                                </div>
-                                <div class="cab-wr-bar"><div class="cab-wr-fill" style="width:${Math.min(godWr.pct||0,100)}%"></div></div>
-                                <div class="cab-wr-label">${godWr.txt}</div>
-                            </div>
-                            <div class="cab-cell cab-partial">
-                                <div class="cab-title"><span>⚡ PARTIAL (5/6)</span></div>
-                                <div class="cab-stats">
-                                    <div class="cab-stat"><div class="cab-stat-val" style="color:#38bdf8;">${rc.partSig}</div><div class="cab-stat-lbl">Signals</div></div>
-                                    <div class="cab-stat"><div class="cab-stat-val" style="color:#34d399;">${rc.partTP}</div><div class="cab-stat-lbl">TP Hits</div></div>
-                                    <div class="cab-stat"><div class="cab-stat-val" style="color:#f87171;">${rc.partSL}</div><div class="cab-stat-lbl">SL Hits</div></div>
-                                </div>
-                                <div class="cab-wr-bar"><div class="cab-wr-fill" style="width:${Math.min(partWr.pct||0,100)}%"></div></div>
-                                <div class="cab-wr-label">${partWr.txt}</div>
-                            </div>
-                        </div>
-
                         ${recentHTML ? `<div class="recent-header">Recent Trades</div>${recentHTML}` : ''}
                     </div>
                 `);
             });
         }
 
+        // INIT
         fetch('/api/stats').then(r=>r.json()).then(data=>{
             currentStats = data.tradeStats || {};
             renderStats();
