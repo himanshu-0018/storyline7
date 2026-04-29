@@ -502,6 +502,8 @@
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <a href="/?filter=wd4h" target="_blank" class="ctrl-btn btn-inject">W+D+4H</a>
+            <a href="/?filter=d4h1h" target="_blank" class="ctrl-btn btn-inject">D+4H+1H</a>
             <button onclick="openModal()" class="ctrl-btn btn-inject"><span>⚡</span> INJECT</button>
             <a href="/stats" class="ctrl-btn btn-stats" style="text-decoration:none;"><span>📊</span> STATISTICS</a>
             <button onclick="openDeleteModal()" class="ctrl-btn btn-delete"><span>🗑️</span> PURGE</button>
@@ -899,29 +901,80 @@ if (mState !== 'NONE') {
             });
         }
 
-        // ══════════════════════════════════
+// ══════════════════════════════════
         // INIT + SSE
         // ══════════════════════════════════
+        
+        // 1. Check URL for filter parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterType = urlParams.get('filter');
+
+        // Optional: Update the page title so you know which tab you are looking at
+        if (filterType === 'wd4h') document.title = "W+D+4H Aligned — God-Mode";
+        if (filterType === 'd4h1h') document.title = "D+4H+1H Aligned — God-Mode";
+
+        // 2. The Filter logic
+        function applyFilter(stateObj) {
+            if (!filterType) return stateObj; // No filter, return all coins
+            const filtered = {};
+            
+            for (const sym in stateObj) {
+                const z = stateObj[sym].zones || {};
+                
+                if (filterType === 'wd4h') {
+                    const w = z["1W"]?.dir;
+                    const d = z["1D"]?.dir;
+                    const h4 = z["4H"]?.dir;
+                    // Check if they are identical AND are a valid direction
+                    if (w && w === d && d === h4 && (w === 'BULLISH' || w === 'BEARISH')) {
+                        filtered[sym] = stateObj[sym];
+                    }
+                } else if (filterType === 'd4h1h') {
+                    const d = z["1D"]?.dir;
+                    const h4 = z["4H"]?.dir;
+                    const h1 = z["1H"]?.dir;
+                    // Check if they are identical AND are a valid direction
+                    if (d && d === h4 && h4 === h1 && (d === 'BULLISH' || d === 'BEARISH')) {
+                        filtered[sym] = stateObj[sym];
+                    }
+                }
+            }
+            return filtered;
+        }
+
+        // 3. Apply to initial load
         fetch('/api/state').then(r=>r.json()).then(data=>{
-            const ms=data.marketState||data;
-            const log=data.activityLog||[];
-            mergeLog(log);if(actLog.length) rebuildFeed();
+            let ms = data.marketState || data;
+            ms = applyFilter(ms); // <--- Filter applied here
+            
+            const log = data.activityLog || [];
+            mergeLog(log); 
+            if(actLog.length) rebuildFeed();
+            
             render(ms);
         });
 
-        const es=new EventSource('/api/stream');
-        const dot=document.getElementById('pulseDot');
-        const lbl=document.getElementById('liveLabel');
-        const bdg=document.getElementById('liveBadge');
+        const es = new EventSource('/api/stream');
+        const dot = document.getElementById('pulseDot');
+        const lbl = document.getElementById('liveLabel');
+        const bdg = document.getElementById('liveBadge');
 
         es.onopen=()=>{dot.className='pulse-dot';lbl.textContent='LIVE';lbl.style.color='#34d399';bdg.className='live-badge';};
         es.onerror=()=>{dot.className='pulse-dot offline';lbl.textContent='RECONNECTING';lbl.style.color='#f87171';bdg.className='live-badge offline';};
-        es.onmessage=e=>{
-            const data=JSON.parse(e.data);
-            if(data.soundAlert){playEntrySound();return;}
-            const ms=data.marketState||data;
-            const log=data.activityLog||[];
-            if(log.length){mergeLog(log);rebuildFeed();}
+        
+        // 4. Apply to live updates
+        es.onmessage = e => {
+            const data = JSON.parse(e.data);
+            if(data.soundAlert) { playEntrySound(); return; }
+            
+            let ms = data.marketState || data;
+            if(ms) {
+                ms = applyFilter(ms);  // <--- Filter applied to real-time streams here
+            }
+            
+            const log = data.activityLog || [];
+            if(log.length) { mergeLog(log); rebuildFeed(); }
+            
             render(ms);
         };
     </script>
