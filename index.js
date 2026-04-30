@@ -18,6 +18,11 @@ const TG_1M_ENTRIES = process.env.TG_1M_ENTRIES;
 const TG_3M_ENTRIES = process.env.TG_3M_ENTRIES;
 const TG_5M_ENTRIES = process.env.TG_5M_ENTRIES;
 
+// ═══ BREAKOUT TELEGRAM CHANNELS ═══
+const TG_BREAKOUT_5OF6   = process.env.TG_BREAKOUT_5OF6;
+const TG_BREAKOUT_6OF6   = process.env.TG_BREAKOUT_6OF6;
+const TG_BREAKOUT_WD4H1H = process.env.TG_BREAKOUT_WD4H1H;
+
 const REDIS_STATE_KEY     = process.env.REDIS_KEY || 'godModeState_v4';
 const REDIS_LOG_KEY       = REDIS_STATE_KEY + '_activityLog';
 const REDIS_STATS_KEY     = REDIS_STATE_KEY + '_tradeStats';
@@ -150,6 +155,13 @@ function checkDirectionAlignment(symbol, direction) {
     return { aligned: true, type, count, combos };
 }
 
+// ═══ NEW: Check if W+D+4H+1H are all aligned in same direction ═══
+function checkWD4H1HAlignment(symbol, direction) {
+    if (!marketState[symbol]) return false;
+    const tfs = marketState[symbol].timeframes || {};
+    return ['1W','1D','4H','1H'].every(tf => tfs[tf] === direction);
+}
+
 function recalculateAlignment(symbol) {
     if (!marketState[symbol]) return { dominantState:"NONE", bullCount:0, bearCount:0, alignCount:0, partialState:"NONE", partialCount:0 };
     const tfs = marketState[symbol].timeframes || {};
@@ -214,7 +226,6 @@ function findBestTrade(stats, { direction, entry, allowedStatuses }) {
     const trades = stats.trades;
     let candidates = [];
 
-    // Priority 1: direction + status + price match
     if (entry !== undefined && entry !== null) {
         for (let i = 0; i < trades.length; i++) {
             const t = trades[i];
@@ -223,7 +234,6 @@ function findBestTrade(stats, { direction, entry, allowedStatuses }) {
         }
     }
 
-    // Priority 2: direction + status only
     if (candidates.length === 0) {
         for (let i = 0; i < trades.length; i++) {
             const t = trades[i];
@@ -396,8 +406,10 @@ app.post('/api/delete-stats', async (req, res) => {
 app.post('/webhook', async (req, res) => {
     const payload = req.body;
 
-    const isStoryline = payload.state !== undefined && payload.tf !== undefined && payload.coin === undefined && payload.action === undefined;
-    const isPineEntry = payload.coin !== undefined && payload.action !== undefined;
+    // ═══ DETECT PAYLOAD TYPE ═══
+    const isStoryline  = payload.state !== undefined && payload.tf !== undefined && payload.coin === undefined && payload.action === undefined && payload.kind === undefined;
+    const isBreakout   = payload.kind === "BREAKOUT";
+    const isPineEntry  = payload.coin !== undefined && payload.action !== undefined && payload.kind === undefined;
 
     // ════════════════════════════════════════
     // STORYLINE
@@ -457,6 +469,97 @@ app.post('/webhook', async (req, res) => {
     }
 
     // ════════════════════════════════════════
+    // BREAKOUT ALERT
+    // ════════════════════════════════════════
+    if (isBreakout) {
+        const sym       = (payload.symbol    || '').toUpperCase().trim();
+        const direction = (payload.direction || '').toUpperCase().trim();
+        const chartTf   = normalizeTf(payload.chart_tf);
+
+        if (!sym || !direction) {
+            console.log(`[BREAKOUT] Invalid payload — missing symbol or direction`);
+            return res.status(400).send("Invalid Breakout Payload");
+        }
+
+        console.log(`\n[BREAKOUT] ${sym} | ${direction} | Chart TF: ${chartTf}`);
+
+        // ─── Step 1: Check alignment ───
+        const align = checkDirectionAlignment(sym, direction);
+
+        if (!align.aligned) {
+            console.log(`  ❌ BREAKOUT IGNORED: ${sym} ${direction} | ${align.reason}`);
+            return res.status(200).send("OK — Not aligned");
+        }
+
+        console.log(`  ✅ BREAKOUT ALIGNED [${align.type}] (${align.count}/6)`);
+
+        // ─── Step 2: Build Telegram message ───
+        const dirEmoji    = direction === "BULLISH" ? "🚀 🐂" : "🩸 🐻";
+        const alignEmoji  = align.type === 'GOD' ? '✅' : '⚡';
+        const alignLabel  = align.type === 'GOD' ? `GOD-MODE (6/6)` : `PARTIAL (${align.count}/6)`;
+        const chartTfStr  = chartTf || payload.chart_tf || '?';
+
+        let tgMsg = `<b>${dirEmoji} BREAKOUT: ${sym}</b>\n\n`;
+        tgMsg += `<b>Direction:</b> ${direction}\n`;
+        tgMsg += `<b>Chart TF:</b> ${chartTfStr}\n`;
+        tgMsg += `\n${alignEmoji} <b>${alignLabel}</b>\n`;
+        tgMsg += `${tfInfoString(sym)}`;
+
+        // ─── Step 3: Route to correct Telegram channels ───
+        const sentChannels = [];
+
+        // 5/6 channel — PARTIAL only (exactly 5, not 6)
+        if (align.count === PARTIAL_THRESHOLD && align.type === 'PARTIAL') {
+            if (TG_BREAKOUT_5OF6) {
+                await sendTelegram(TG_BREAKOUT_5OF6, tgMsg);
+                sentChannels.push('5/6');
+                console.log(`  📡 Sent to 5/6 breakout channel`);
+            } else {
+                console.log(`  ⚠️ TG_BREAKOUT_5OF6 not configured`);
+            }
+        }
+
+        // 6/6 channel — GOD mode only
+        if (align.type === 'GOD') {
+            if (TG_BREAKOUT_6OF6) {
+                await sendTelegram(TG_BREAKOUT_6OF6, tgMsg);
+                sentChannels.push('6/6');
+                console.log(`  📡 Sent to 6/6 breakout channel`);
+            } else {
+                console.log(`  ⚠️ TG_BREAKOUT_6OF6 not configured`);
+            }
+        }
+
+        // W+D+4H+1H channel — all 4 TFs same direction (regardless of 5/6 or 6/6)
+        const isWD4H1H = checkWD4H1HAlignment(sym, direction);
+        if (isWD4H1H) {
+            if (TG_BREAKOUT_WD4H1H) {
+                await sendTelegram(TG_BREAKOUT_WD4H1H, tgMsg);
+                sentChannels.push('W+D+4H+1H');
+                console.log(`  📡 Sent to W+D+4H+1H breakout channel`);
+            } else {
+                console.log(`  ⚠️ TG_BREAKOUT_WD4H1H not configured`);
+            }
+        }
+
+        // ─── Step 4: Log to activity feed ───
+        const channelStr = sentChannels.length > 0 ? ` → [${sentChannels.join(', ')}]` : '';
+        await pushLogEvent(
+            sym,
+            direction,
+            `💥 BREAKOUT: ${direction} | Chart:${chartTfStr} | ${alignLabel}${channelStr}`,
+            { logAction: 'BREAKOUT', direction, chart_tf: chartTfStr, align_type: align.type, align_count: align.count }
+        );
+
+        // ─── Step 5: Broadcast to webpage ───
+        broadcastAll();
+        broadcastSoundAlert(sym, direction);
+
+        console.log(`  ✅ Breakout processed: ${sym} ${direction} | Channels: ${sentChannels.join(', ') || 'none'}`);
+        return res.status(200).send("OK");
+    }
+
+    // ════════════════════════════════════════
     // PINESCRIPT OB ALERTS
     // ════════════════════════════════════════
     if (isPineEntry) {
@@ -478,9 +581,6 @@ app.post('/webhook', async (req, res) => {
 
         console.log(`\n[PINE ${action}] ${sym} | ${direction} | TF:${entryTf} | Entry:${entry} | SL:${sl} | TP:${tp}`);
 
-        // ══════════════════════════════════════
-        // OB_FORMED — Only alert that checks alignment. Creates PENDING trade.
-        // ══════════════════════════════════════
         if (action === "OB_FORMED") {
             const align = checkDirectionAlignment(sym, direction);
             if (!align.aligned) {
@@ -514,7 +614,6 @@ app.post('/webhook', async (req, res) => {
             stats.trades.push(trade);
             if (stats.trades.length > 500) stats.trades = stats.trades.slice(-500);
 
-            // Telegram
             const chatId = TG_CHANNEL_MAP[entryTf]?.();
             let soundTriggered = false;
             if (chatId) {
@@ -542,14 +641,9 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ══════════════════════════════════════
-        // ENTRY_DONE — Find PENDING → mark ACTIVE
-        // No alignment check (already checked at OB_FORMED)
-        // ══════════════════════════════════════
         if (action === "ENTRY_DONE") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
-
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (found) {
                 found.trade.status = 'ACTIVE';
@@ -565,14 +659,9 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ══════════════════════════════════════
-        // ENTRY_AND_SL_HIT — Find PENDING → directly SL_HIT (counts in stats)
-        // No alignment check (already checked at OB_FORMED)
-        // ══════════════════════════════════════
         if (action === "ENTRY_AND_SL_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
-
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (found) {
                 found.trade.status = 'SL_HIT';
@@ -589,14 +678,9 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ══════════════════════════════════════
-        // ENTRY_AND_TP_HIT — Find PENDING → directly TP_HIT (counts in stats)
-        // No alignment check (already checked at OB_FORMED)
-        // ══════════════════════════════════════
         if (action === "ENTRY_AND_TP_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
-
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (found) {
                 found.trade.status = 'TP_HIT';
@@ -613,19 +697,15 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ══════════════════════════════════════
-        // TP_HIT — Find ACTIVE → TP_HIT. If only PENDING → TP_NO_ENTRY (not counted)
-        // ══════════════════════════════════════
         if (action === "TP_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
 
-            // Try ACTIVE first
             const foundActive = findBestTrade(stats, { direction, entry, allowedStatuses: ['ACTIVE'] });
             if (foundActive) {
                 foundActive.trade.status = 'TP_HIT';
                 foundActive.trade.result_time = Date.now();
-                console.log(`  🎯 TP HIT (after entry): ${foundActive.trade.id}`);
+                console.log(`  🎯 TP HIT: ${foundActive.trade.id}`);
                 await saveStats();
                 broadcastStats();
                 await pushLogEvent(sym, 'BULLISH', `🎯 TP HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_HIT' });
@@ -633,7 +713,6 @@ app.post('/webhook', async (req, res) => {
                 return res.status(200).send("OK");
             }
 
-            // If still PENDING → TP without entry, NOT counted
             const foundPending = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (foundPending) {
                 foundPending.trade.status = 'TP_NO_ENTRY';
@@ -649,9 +728,6 @@ app.post('/webhook', async (req, res) => {
             return res.status(200).send("OK");
         }
 
-        // ══════════════════════════════════════
-        // SL_HIT — Find ACTIVE → SL_HIT. If only PENDING → SL_NO_ENTRY (not counted)
-        // ══════════════════════════════════════
         if (action === "SL_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
@@ -660,7 +736,7 @@ app.post('/webhook', async (req, res) => {
             if (foundActive) {
                 foundActive.trade.status = 'SL_HIT';
                 foundActive.trade.result_time = Date.now();
-                console.log(`  💀 SL HIT (after entry): ${foundActive.trade.id}`);
+                console.log(`  💀 SL HIT: ${foundActive.trade.id}`);
                 await saveStats();
                 broadcastStats();
                 await pushLogEvent(sym, 'BEARISH', `💀 SL HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_HIT' });
@@ -729,4 +805,7 @@ app.listen(PORT, () => {
     console.log(`📊 Alignment: ${GOD_THRESHOLD}/6 = GOD, ${PARTIAL_THRESHOLD}/6 = PARTIAL`);
     console.log(`📡 Entry TFs: ${ENTRY_TFS.join(', ')}`);
     console.log(`📡 Combos: ${ALIGNMENT_COMBOS.length} tracked`);
+    console.log(`📡 Breakout 5/6:    ${TG_BREAKOUT_5OF6   || 'NOT SET'}`);
+    console.log(`📡 Breakout 6/6:    ${TG_BREAKOUT_6OF6   || 'NOT SET'}`);
+    console.log(`📡 Breakout W+D+4H+1H: ${TG_BREAKOUT_WD4H1H || 'NOT SET'}`);
 });
