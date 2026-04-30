@@ -37,7 +37,7 @@
         .summary-card { padding:12px;border-radius:14px;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.08);text-align:center; }
         .summary-card .sc-val { font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:900;line-height:1;margin-bottom:4px; }
         .summary-card .sc-label { font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:rgba(148,163,184,0.5);text-transform:uppercase;letter-spacing:0.1em; }
-        .sc-signals .sc-val { color:#38bdf8; } .sc-entries .sc-val { color:#a78bfa; } .sc-tp .sc-val { color:#34d399; }
+        .sc-signals .sc-val { color:#38bdf8; } .sc-tp .sc-val { color:#34d399; }
         .sc-sl .sc-val { color:#f87171; } .sc-winrate .sc-val { color:#fbbf24; } .sc-pending .sc-val { color:#94a3b8; }
 
         .combo-section { margin-bottom:16px; }
@@ -71,7 +71,8 @@
         .filter-group { display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
         .filter-group-label { font-family:'JetBrains Mono',monospace;font-size:0.52rem;font-weight:700;color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.1em;white-space:nowrap; }
         .filter-btn { padding:4px 10px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.58rem;font-weight:700;cursor:pointer;transition:all 0.2s;border:1px solid;letter-spacing:0.04em;white-space:nowrap; }
-        .filter-btn.active-tf { background:linear-gradient(135deg,rgba(14,165,233,0.3),rgba(56,189,248,0.15));border-color:rgba(56,189,248,0.6);color:#7dd3fc; }
+        .filter-btn.active-tf { background:linear-gradient(135deg,rgba(14,165,233,0.3),rgba(56,189,248,0.15));border-color:rgba(56,189,248,0.6);color:#7dd3fc;box-shadow:0 0 12px rgba(56,189,248,0.15); }
+        .filter-btn.active-combo { background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(251,191,36,0.15));border-color:rgba(251,191,36,0.6);color:#fde68a;box-shadow:0 0 12px rgba(245,158,11,0.15); }
         .filter-btn:not([class*="active"]) { background:rgba(30,41,59,0.6);border-color:rgba(71,85,105,0.4);color:#64748b; }
         .filter-btn:not([class*="active"]):hover { border-color:rgba(100,116,139,0.6);color:#94a3b8; }
         .filter-divider { width:1px;height:24px;background:rgba(255,255,255,0.08); }
@@ -104,7 +105,6 @@
 
         .empty-stats { font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:rgba(148,163,184,0.3);text-align:center;padding:60px 20px;grid-column:1/-1; }
 
-        /* ── FEED PANEL ── */
         .feed-panel { width:300px;flex-shrink:0;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);background:rgba(8,12,22,0.85);backdrop-filter:blur(24px); }
         .feed-header { padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.06);background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(251,191,36,0.08));display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
         .feed-title { font-family:'Orbitron',sans-serif;font-size:0.6rem;font-weight:700;color:#fbbf24;letter-spacing:0.1em; }
@@ -185,6 +185,22 @@
                     <button class="filter-btn" id="tf-3M" onclick="setTfFilter('3M',this)">3M</button>
                     <button class="filter-btn" id="tf-5M" onclick="setTfFilter('5M',this)">5M</button>
                 </div>
+                <div class="filter-divider"></div>
+                <div class="filter-group">
+                    <span class="filter-group-label">ALIGNMENT:</span>
+                    <button class="filter-btn active-combo" id="co-ALL" onclick="setComboFilterBtn('ALL',this)">ALL</button>
+                    <button class="filter-btn" id="co-W_D_4H" onclick="setComboFilterBtn('W_D_4H',this)">W+D+4H</button>
+                    <button class="filter-btn" id="co-W_D_4H_1H" onclick="setComboFilterBtn('W_D_4H_1H',this)">W+D+4H+1H</button>
+                    <button class="filter-btn" id="co-W_D_4H_1H_30M" onclick="setComboFilterBtn('W_D_4H_1H_30M',this)">W+D+4H+1H+30M</button>
+                    <button class="filter-btn" id="co-W_D_4H_1H_30M_15M" onclick="setComboFilterBtn('W_D_4H_1H_30M_15M',this)">W+D+4H+1H+30M+15M</button>
+                    <button class="filter-btn" id="co-D_4H" onclick="setComboFilterBtn('D_4H',this)">D+4H</button>
+                    <button class="filter-btn" id="co-D_4H_1H" onclick="setComboFilterBtn('D_4H_1H',this)">D+4H+1H</button>
+                    <button class="filter-btn" id="co-D_4H_1H_30M" onclick="setComboFilterBtn('D_4H_1H_30M',this)">D+4H+1H+30M</button>
+                    <button class="filter-btn" id="co-D_4H_1H_30M_15M" onclick="setComboFilterBtn('D_4H_1H_30M_15M',this)">D+4H+1H+30M+15M</button>
+                    <button class="filter-btn" id="co-4H_1H" onclick="setComboFilterBtn('4H_1H',this)">4H+1H</button>
+                    <button class="filter-btn" id="co-4H_1H_30M" onclick="setComboFilterBtn('4H_1H_30M',this)">4H+1H+30M</button>
+                    <button class="filter-btn" id="co-4H_1H_30M_15M" onclick="setComboFilterBtn('4H_1H_30M_15M',this)">4H+1H+30M+15M</button>
+                </div>
             </div>
 
             <div class="coin-stats-grid" id="statsGrid">
@@ -224,10 +240,6 @@
         let currentTfFilter = 'ALL';
         let feedEvents = [];
         const ENTRY_TFS = ['1M', '3M', '5M'];
-        // Statuses that count in win/loss stats
-        const COUNTED_STATUSES = ['TP_HIT', 'SL_HIT', 'ACTIVE'];
-        // Statuses that are "completed" for win rate
-        const RESULT_STATUSES = ['TP_HIT', 'SL_HIT'];
 
         const moneySound = new Audio('/money.mp3');
         moneySound.volume = 0.85;
@@ -263,18 +275,45 @@
         async function doClearSymbol() {
             const sym = document.getElementById('clearSymbol').value.toUpperCase().trim();
             if (!sym) return alert('Enter a symbol.');
-            await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:sym}) });
-            closeClearModal();
-        }
-        async function doClearAll() {
-            if (!confirm('Clear ALL trade statistics?')) return;
-            await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:'ALL'}) });
+            const r = await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:sym}) });
+            if (r.ok) {
+                feedEvents = feedEvents.filter(e => e.symbol !== sym);
+                rebuildFeed();
+            }
             closeClearModal();
         }
 
+        async function doClearAll() {
+            if (!confirm('Clear ALL trade statistics?')) return;
+            const r = await fetch('/api/delete-stats', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:'ALL'}) });
+            if (r.ok) {
+                feedEvents = [];
+                rebuildFeed();
+            }
+            closeClearModal();
+        }
+
+        // Combo filter from combo card click (toggle)
         function setComboFilter(comboId, el) {
             currentComboFilter = currentComboFilter === comboId ? 'ALL' : comboId;
+            syncComboButtons();
             renderStats();
+            rebuildFeed();
+        }
+
+        // Combo filter from filter bar button click (set directly)
+        function setComboFilterBtn(comboId, btn) {
+            currentComboFilter = comboId;
+            syncComboButtons();
+            renderStats();
+            rebuildFeed();
+        }
+
+        // Sync all combo button states
+        function syncComboButtons() {
+            document.querySelectorAll('[id^="co-"]').forEach(b => b.className = 'filter-btn');
+            const activeBtn = document.getElementById('co-' + currentComboFilter);
+            if (activeBtn) activeBtn.className = 'filter-btn active-combo';
         }
 
         function setTfFilter(tf, btn) {
@@ -290,12 +329,14 @@
             const d = new Date(ts);
             return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
         }
+
         function calcWR(tp, sl) {
             const t = tp + sl;
             if (t === 0) return { txt:'N/A', pct:0, cls:'wr-na' };
             const p = parseFloat(((tp/t)*100).toFixed(1));
             return { txt:p+'%', pct:p, cls: p>=60?'wr-good':p<40?'wr-bad':'wr-mid' };
         }
+
         function alignTag(a) {
             if (a==='GOD') return '<span class="align-tag align-tag-god">GOD</span>';
             if (a==='PARTIAL') return '<span class="align-tag align-tag-partial">PARTIAL</span>';
@@ -312,12 +353,6 @@
                 });
             });
             return all;
-        }
-
-        function isCountedTrade(t) {
-            // Only count trades that had actual entry: TP_HIT, SL_HIT, ACTIVE
-            // NOT counted: PENDING, CANCELLED, TP_NO_ENTRY, SL_NO_ENTRY
-            return COUNTED_STATUSES.includes(t.status);
         }
 
         function filterTrades(trades) {
@@ -356,37 +391,33 @@
                 ENTRY_TFS.forEach(tf => {
                     (stats[sym]?.[tf]?.trades || []).forEach(t => {
                         if (t.status === 'CANCELLED') return;
-                        // Signal
                         if (t.signal_time) {
                             events.push({
                                 symbol: sym, type: 'SIGNAL', message: `📡 OB ${t.direction} @ ${t.entry}`,
                                 timestamp: t.signal_time, entry_tf: t.entry_tf || tf, direction: t.direction,
-                                align_type: t.alignment, status: t.status
+                                align_type: t.alignment, status: t.status, align_combos: t.align_combos || []
                             });
                         }
-                        // Entry filled
                         if (t.entry_time && t.status !== 'PENDING' && t.entry_time !== t.signal_time) {
                             events.push({
                                 symbol: sym, type: 'ENTRY', message: `📥 Entry filled @ ${t.entry}`,
                                 timestamp: t.entry_time, entry_tf: t.entry_tf || tf, direction: t.direction,
-                                align_type: t.alignment, status: t.status
+                                align_type: t.alignment, status: t.status, align_combos: t.align_combos || []
                             });
                         }
-                        // Result
                         if (t.result_time && (t.status === 'TP_HIT' || t.status === 'SL_HIT')) {
                             const icon = t.status === 'TP_HIT' ? '🎯' : '💀';
                             events.push({
                                 symbol: sym, type: t.status, message: `${icon} ${t.status.replace('_',' ')} @ ${t.entry}`,
                                 timestamp: t.result_time, entry_tf: t.entry_tf || tf, direction: t.direction,
-                                align_type: t.alignment, status: t.status
+                                align_type: t.alignment, status: t.status, align_combos: t.align_combos || []
                             });
                         }
-                        // TP/SL no entry
                         if (t.result_time && (t.status === 'TP_NO_ENTRY' || t.status === 'SL_NO_ENTRY')) {
                             events.push({
-                                symbol: sym, type: 'SKIP', message: `⏭️ ${t.status.replace('_',' ')} @ ${t.entry}`,
+                                symbol: sym, type: 'SKIP', message: `⏭️ ${t.status.replace(/_/g,' ')} @ ${t.entry}`,
                                 timestamp: t.result_time, entry_tf: t.entry_tf || tf, direction: t.direction,
-                                align_type: t.alignment, status: t.status
+                                align_type: t.alignment, status: t.status, align_combos: t.align_combos || []
                             });
                         }
                     });
@@ -401,8 +432,13 @@
             const countEl = document.getElementById('feedCount');
 
             let filtered = feedEvents;
+            // Filter by TF
             if (currentTfFilter !== 'ALL') {
                 filtered = filtered.filter(e => e.entry_tf === currentTfFilter);
+            }
+            // Filter by combo
+            if (currentComboFilter !== 'ALL') {
+                filtered = filtered.filter(e => (e.align_combos || []).includes(currentComboFilter));
             }
 
             if (filtered.length === 0) {
@@ -445,11 +481,9 @@
             let allGlobal = [];
             symbols.forEach(sym => { allGlobal = allGlobal.concat(getAllTrades(sym)); });
 
-            // Combo breakdown — always unfiltered
             const allAlive = allGlobal.filter(t => !['CANCELLED','TP_NO_ENTRY','SL_NO_ENTRY'].includes(t.status));
             renderComboBreakdown(allAlive);
 
-            // Filtered for summary + cards
             const filteredGlobal = filterTrades(allGlobal);
             const gc = countFromTrades(filteredGlobal);
             const gwr = calcWR(gc.tp, gc.sl);
@@ -496,7 +530,7 @@
                     else if (t.status==='SL_HIT') { cls='tr-sl';icon='💀';stxt='SL HIT'; }
                     else if (t.status==='ACTIVE') { cls='tr-active';icon='📥';stxt='ACTIVE'; }
                     else if (t.status==='PENDING') { cls='tr-pending';icon='📡';stxt='PENDING'; }
-                    else if (t.status==='TP_NO_ENTRY'||t.status==='SL_NO_ENTRY') { cls='tr-noentry';icon='⏭️';stxt=t.status.replace('_',' '); }
+                    else if (t.status==='TP_NO_ENTRY'||t.status==='SL_NO_ENTRY') { cls='tr-noentry';icon='⏭️';stxt=t.status.replace(/_/g,' '); }
                     else { cls='tr-pending';icon='❓';stxt=t.status; }
                     const di = t.direction==='BULLISH'?'🐂':'🐻';
                     const stc = t.status==='TP_HIT'?'#34d399':t.status==='SL_HIT'?'#f87171':'#94a3b8';
@@ -511,7 +545,6 @@
                     </div>`);
             });
 
-            // Update feed
             feedEvents = extractFeedEvents(currentStats);
             rebuildFeed();
         }
@@ -554,7 +587,6 @@
         sse.onmessage = e => {
             const data = JSON.parse(e.data);
             if (data.tradeStats) {
-                // Count total trades to detect new ones
                 let newCount = 0;
                 for (const sym in data.tradeStats) {
                     ENTRY_TFS.forEach(tf => {
