@@ -19,13 +19,15 @@ const TG_3M_ENTRIES = process.env.TG_3M_ENTRIES;
 const TG_5M_ENTRIES = process.env.TG_5M_ENTRIES;
 
 // ═══ BREAKOUT TELEGRAM CHANNELS ═══
-const TG_BREAKOUT_5OF6   = process.env.TG_BREAKOUT_5OF6;
-const TG_BREAKOUT_6OF6   = process.env.TG_BREAKOUT_6OF6;
-const TG_BREAKOUT_WD4H1H = process.env.TG_BREAKOUT_WD4H1H;
+const TG_BREAKOUT_5OF6    = process.env.TG_BREAKOUT_5OF6;
+const TG_BREAKOUT_6OF6    = process.env.TG_BREAKOUT_6OF6;
+const TG_BREAKOUT_WD4H1H  = process.env.TG_BREAKOUT_WD4H1H;
+const TG_CUSTOM_ALIGNMENT = process.env.TG_CUSTOM_ALIGNMENT;
 
 const REDIS_STATE_KEY     = process.env.REDIS_KEY || 'godModeState_v4';
 const REDIS_LOG_KEY       = REDIS_STATE_KEY + '_activityLog';
 const REDIS_STATS_KEY     = REDIS_STATE_KEY + '_tradeStats';
+const REDIS_SETTINGS_KEY  = REDIS_STATE_KEY + '_settings';
 
 const ZONE_TIMEFRAMES     = ["1W", "1D", "4H", "1H", "30M", "15M"];
 const GOD_THRESHOLD       = 6;
@@ -55,6 +57,7 @@ const ALIGNMENT_COMBOS = [
 let marketState  = {};
 let activityLog  = [];
 let tradeStats   = {};
+let appSettings  = { activeAlignments: [] };
 let clients      = [];
 let statsClients = [];
 
@@ -62,7 +65,7 @@ let statsClients = [];
 // BROADCAST
 // ══════════════════════════════════════════════
 function broadcastAll(extras = {}) {
-    const data = JSON.stringify({ marketState, activityLog, ...extras });
+    const data = JSON.stringify({ marketState, activityLog, settings: appSettings, ...extras });
     clients.forEach(c => c.res.write(`data: ${data}\n\n`));
 }
 
@@ -155,11 +158,20 @@ function checkDirectionAlignment(symbol, direction) {
     return { aligned: true, type, count, combos };
 }
 
-// ═══ NEW: Check if W+D+4H+1H are all aligned in same direction ═══
 function checkWD4H1HAlignment(symbol, direction) {
     if (!marketState[symbol]) return false;
     const tfs = marketState[symbol].timeframes || {};
     return ['1W','1D','4H','1H'].every(tf => tfs[tf] === direction);
+}
+
+function checkCustomAlignment(symbol, direction) {
+    if (!marketState[symbol] || appSettings.activeAlignments.length === 0) return false;
+    const tfs = marketState[symbol].timeframes || {};
+    for (const comboId of appSettings.activeAlignments) {
+        const combo = ALIGNMENT_COMBOS.find(c => c.id === comboId);
+        if (combo && combo.tfs.every(tf => tfs[tf] === direction)) return true;
+    }
+    return false;
 }
 
 function recalculateAlignment(symbol) {
@@ -225,7 +237,6 @@ async function saveStats() {
 function findBestTrade(stats, { direction, entry, allowedStatuses }) {
     const trades = stats.trades;
     let candidates = [];
-
     if (entry !== undefined && entry !== null) {
         for (let i = 0; i < trades.length; i++) {
             const t = trades[i];
@@ -233,7 +244,6 @@ function findBestTrade(stats, { direction, entry, allowedStatuses }) {
                 candidates.push({ trade: t, index: i });
         }
     }
-
     if (candidates.length === 0) {
         for (let i = 0; i < trades.length; i++) {
             const t = trades[i];
@@ -241,7 +251,6 @@ function findBestTrade(stats, { direction, entry, allowedStatuses }) {
                 candidates.push({ trade: t, index: i });
         }
     }
-
     if (candidates.length === 0) return null;
     candidates.sort((a, b) => a.index - b.index);
     return candidates[0];
@@ -344,11 +353,34 @@ if (savedStats) {
     console.log(`📊 Stats for ${Object.keys(tradeStats).length} symbols`);
 }
 
+const savedSettings = await redisClient.get(REDIS_SETTINGS_KEY);
+if (savedSettings) {
+    appSettings = JSON.parse(savedSettings);
+    console.log(`⚙️ Settings loaded: ${appSettings.activeAlignments.length} alignments active`);
+} else {
+    console.log('⚙️ No saved settings, using defaults');
+}
+
 // ══════════════════════════════════════════════
 // API ROUTES
 // ══════════════════════════════════════════════
-app.get('/api/state', (req, res) => res.json({ marketState, activityLog }));
+app.get('/api/state', (req, res) => res.json({ marketState, activityLog, settings: appSettings }));
 app.get('/api/stats', (req, res) => res.json({ tradeStats: buildEnrichedStats(), alignmentCombos: ALIGNMENT_COMBOS }));
+
+app.get('/api/settings', (req, res) => {
+    res.json({ settings: appSettings, alignmentCombos: ALIGNMENT_COMBOS });
+});
+
+app.post('/api/settings', async (req, res) => {
+    const { activeAlignments } = req.body;
+    if (!Array.isArray(activeAlignments)) return res.status(400).send("Invalid");
+    const validIds = ALIGNMENT_COMBOS.map(c => c.id);
+    appSettings.activeAlignments = activeAlignments.filter(id => validIds.includes(id));
+    await redisClient.set(REDIS_SETTINGS_KEY, JSON.stringify(appSettings));
+    console.log(`⚙️ Settings saved: ${appSettings.activeAlignments.length} alignments active: ${appSettings.activeAlignments.join(', ')}`);
+    broadcastAll({ settings: appSettings });
+    res.json({ ok: true, settings: appSettings });
+});
 
 app.get('/api/stream', (req, res) => {
     res.setHeader('Content-Type','text/event-stream');
@@ -406,7 +438,6 @@ app.post('/api/delete-stats', async (req, res) => {
 app.post('/webhook', async (req, res) => {
     const payload = req.body;
 
-    // ═══ DETECT PAYLOAD TYPE ═══
     const isStoryline  = payload.state !== undefined && payload.tf !== undefined && payload.coin === undefined && payload.action === undefined && payload.kind === undefined;
     const isBreakout   = payload.kind === "BREAKOUT";
     const isPineEntry  = payload.coin !== undefined && payload.action !== undefined && payload.kind === undefined;
@@ -477,13 +508,12 @@ app.post('/webhook', async (req, res) => {
         const chartTf   = normalizeTf(payload.chart_tf);
 
         if (!sym || !direction) {
-            console.log(`[BREAKOUT] Invalid payload — missing symbol or direction`);
+            console.log(`[BREAKOUT] Invalid payload`);
             return res.status(400).send("Invalid Breakout Payload");
         }
 
         console.log(`\n[BREAKOUT] ${sym} | ${direction} | Chart TF: ${chartTf}`);
 
-        // ─── Step 1: Check alignment ───
         const align = checkDirectionAlignment(sym, direction);
 
         if (!align.aligned) {
@@ -493,7 +523,6 @@ app.post('/webhook', async (req, res) => {
 
         console.log(`  ✅ BREAKOUT ALIGNED [${align.type}] (${align.count}/6)`);
 
-        // ─── Step 2: Build Telegram message ───
         const dirEmoji    = direction === "BULLISH" ? "🚀 🐂" : "🩸 🐻";
         const alignEmoji  = align.type === 'GOD' ? '✅' : '⚡';
         const alignLabel  = align.type === 'GOD' ? `GOD-MODE (6/6)` : `PARTIAL (${align.count}/6)`;
@@ -505,53 +534,41 @@ app.post('/webhook', async (req, res) => {
         tgMsg += `\n${alignEmoji} <b>${alignLabel}</b>\n`;
         tgMsg += `${tfInfoString(sym)}`;
 
-        // ─── Step 3: Route to correct Telegram channels ───
         const sentChannels = [];
 
-        // 5/6 channel — PARTIAL only (exactly 5, not 6)
         if (align.count === PARTIAL_THRESHOLD && align.type === 'PARTIAL') {
             if (TG_BREAKOUT_5OF6) {
                 await sendTelegram(TG_BREAKOUT_5OF6, tgMsg);
                 sentChannels.push('5/6');
-                console.log(`  📡 Sent to 5/6 breakout channel`);
-            } else {
-                console.log(`  ⚠️ TG_BREAKOUT_5OF6 not configured`);
             }
         }
 
-        // 6/6 channel — GOD mode only
         if (align.type === 'GOD') {
             if (TG_BREAKOUT_6OF6) {
                 await sendTelegram(TG_BREAKOUT_6OF6, tgMsg);
                 sentChannels.push('6/6');
-                console.log(`  📡 Sent to 6/6 breakout channel`);
-            } else {
-                console.log(`  ⚠️ TG_BREAKOUT_6OF6 not configured`);
             }
         }
 
-        // W+D+4H+1H channel — all 4 TFs same direction (regardless of 5/6 or 6/6)
         const isWD4H1H = checkWD4H1HAlignment(sym, direction);
         if (isWD4H1H) {
             if (TG_BREAKOUT_WD4H1H) {
                 await sendTelegram(TG_BREAKOUT_WD4H1H, tgMsg);
                 sentChannels.push('W+D+4H+1H');
-                console.log(`  📡 Sent to W+D+4H+1H breakout channel`);
-            } else {
-                console.log(`  ⚠️ TG_BREAKOUT_WD4H1H not configured`);
             }
         }
 
-        // ─── Step 4: Log to activity feed ───
-        const channelStr = sentChannels.length > 0 ? ` → [${sentChannels.join(', ')}]` : '';
-        await pushLogEvent(
-            sym,
-            direction,
-            `💥 BREAKOUT: ${direction} | Chart:${chartTfStr} | ${alignLabel}${channelStr}`,
-            { logAction: 'BREAKOUT', direction, chart_tf: chartTfStr, align_type: align.type, align_count: align.count }
-        );
+        const isCustom = checkCustomAlignment(sym, direction);
+        if (isCustom) {
+            if (TG_CUSTOM_ALIGNMENT) {
+                await sendTelegram(TG_CUSTOM_ALIGNMENT, tgMsg);
+                sentChannels.push('CUSTOM');
+            }
+        }
 
-        // ─── Step 5: Broadcast to webpage ───
+        const channelStr = sentChannels.length > 0 ? ` → [${sentChannels.join(', ')}]` : '';
+        await pushLogEvent(sym, direction, `💥 BREAKOUT: ${direction} | Chart:${chartTfStr} | ${alignLabel}${channelStr}`, { logAction: 'BREAKOUT', direction, chart_tf: chartTfStr });
+
         broadcastAll();
         broadcastSoundAlert(sym, direction);
 
@@ -588,26 +605,14 @@ app.post('/webhook', async (req, res) => {
                 return res.status(200).send("OK — Not aligned");
             }
 
-            console.log(`  ✅ ALIGNED [${align.type}] (${align.count}/6) | Combos: ${align.combos.join(',')}`);
-
             const stats = ensureStats(sym, entryTf);
             stats.total_signals++;
 
             const trade = {
-                id: makeTradeId(sym, entryTf),
-                direction,
-                entry:        parseFloat(entry) || entry,
-                sl:           parseFloat(sl) || sl,
-                tp:           parseFloat(tp) || tp,
-                rr:           parseFloat(rr) || rr,
-                alignment:    align.type,
-                align_combos: align.combos,
-                align_count:  align.count,
-                status:       'PENDING',
-                signal_time:  Date.now(),
-                entry_time:   null,
-                result_time:  null,
-                entry_tf:     entryTf,
+                id: makeTradeId(sym, entryTf), direction,
+                entry: parseFloat(entry)||entry, sl: parseFloat(sl)||sl, tp: parseFloat(tp)||tp, rr: parseFloat(rr)||rr,
+                alignment: align.type, align_combos: align.combos, align_count: align.count,
+                status: 'PENDING', signal_time: Date.now(), entry_time: null, result_time: null, entry_tf: entryTf,
                 telegram_chat_id: null, telegram_message_id: null, telegram_deleted: false,
                 cancelled_time: null, cancelled_reason: null
             };
@@ -619,22 +624,15 @@ app.post('/webhook', async (req, res) => {
             if (chatId) {
                 const alignLabel = align.type === 'GOD' ? 'GOD-MODE (6/6)' : `PARTIAL (${align.count}/6)`;
                 const dirEmoji = direction === "BULLISH" ? "🟢 🐂" : "🔴 🐻";
-                let msg = `<b>${dirEmoji} ${entryTf} OB SIGNAL: ${sym}</b>\n\n`;
-                msg += `<b>Entry:</b> <code>${entry}</code>\n<b>SL:</b> <code>${sl}</code>\n`;
+                let msg = `<b>${dirEmoji} ${entryTf} OB SIGNAL: ${sym}</b>\n\n<b>Entry:</b> <code>${entry}</code>\n<b>SL:</b> <code>${sl}</code>\n`;
                 if (tp) msg += `<b>TP:</b> <code>${tp}</code>\n`;
                 if (rr) msg += `<b>R:R:</b> ${rr}\n`;
                 msg += `\n${align.type === 'GOD' ? '✅' : '⚡'} <b>${alignLabel}</b>\n${tfInfoString(sym)}`;
-
                 const sent = await sendTelegramTracked(chatId, msg);
-                if (sent.ok) {
-                    soundTriggered = true;
-                    trade.telegram_chat_id = chatId;
-                    trade.telegram_message_id = sent.messageId;
-                }
+                if (sent.ok) { soundTriggered = true; trade.telegram_chat_id = chatId; trade.telegram_message_id = sent.messageId; }
             }
 
-            await saveStats();
-            broadcastStats();
+            await saveStats(); broadcastStats();
             if (soundTriggered) broadcastSoundAlert(sym, direction);
             await pushLogEvent(sym, direction, `📡 OB SIGNAL: ${direction} ${entryTf} @ ${entry} [${align.type} ${align.count}/6]`, { entry_tf: entryTf, direction, logAction: 'SIGNAL' });
             broadcastAll();
@@ -643,123 +641,85 @@ app.post('/webhook', async (req, res) => {
 
         if (action === "ENTRY_DONE") {
             const stats = tradeStats[sym]?.[entryTf];
-            if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
+            if (!stats) return res.status(200).send("OK");
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (found) {
-                found.trade.status = 'ACTIVE';
-                found.trade.entry_time = Date.now();
-                console.log(`  ✅ ENTRY FILLED: ${found.trade.id}`);
-                await saveStats();
-                broadcastStats();
+                found.trade.status = 'ACTIVE'; found.trade.entry_time = Date.now();
+                await saveStats(); broadcastStats();
                 await pushLogEvent(sym, direction, `📥 ENTRY FILLED: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'ENTRY_FILLED' });
                 broadcastAll();
-            } else {
-                console.log(`  ⚠️ No PENDING trade for ${sym} ${entryTf} ${direction} @ ${entry}`);
             }
             return res.status(200).send("OK");
         }
 
         if (action === "ENTRY_AND_SL_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
-            if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
+            if (!stats) return res.status(200).send("OK");
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (found) {
-                found.trade.status = 'SL_HIT';
-                found.trade.entry_time = Date.now();
-                found.trade.result_time = Date.now();
-                console.log(`  💀 ENTRY+SL HIT: ${found.trade.id}`);
-                await saveStats();
-                broadcastStats();
+                found.trade.status = 'SL_HIT'; found.trade.entry_time = Date.now(); found.trade.result_time = Date.now();
+                await saveStats(); broadcastStats();
                 await pushLogEvent(sym, 'BEARISH', `💀 ENTRY+SL HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_HIT' });
                 broadcastAll();
-            } else {
-                console.log(`  ⚠️ No PENDING trade for ENTRY+SL: ${sym} ${entryTf} ${direction}`);
             }
             return res.status(200).send("OK");
         }
 
         if (action === "ENTRY_AND_TP_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
-            if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
+            if (!stats) return res.status(200).send("OK");
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (found) {
-                found.trade.status = 'TP_HIT';
-                found.trade.entry_time = Date.now();
-                found.trade.result_time = Date.now();
-                console.log(`  🎯 ENTRY+TP HIT: ${found.trade.id}`);
-                await saveStats();
-                broadcastStats();
+                found.trade.status = 'TP_HIT'; found.trade.entry_time = Date.now(); found.trade.result_time = Date.now();
+                await saveStats(); broadcastStats();
                 await pushLogEvent(sym, 'BULLISH', `🎯 ENTRY+TP HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_HIT' });
                 broadcastAll();
-            } else {
-                console.log(`  ⚠️ No PENDING trade for ENTRY+TP: ${sym} ${entryTf} ${direction}`);
             }
             return res.status(200).send("OK");
         }
 
         if (action === "TP_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
-            if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
-
+            if (!stats) return res.status(200).send("OK");
             const foundActive = findBestTrade(stats, { direction, entry, allowedStatuses: ['ACTIVE'] });
             if (foundActive) {
-                foundActive.trade.status = 'TP_HIT';
-                foundActive.trade.result_time = Date.now();
-                console.log(`  🎯 TP HIT: ${foundActive.trade.id}`);
-                await saveStats();
-                broadcastStats();
+                foundActive.trade.status = 'TP_HIT'; foundActive.trade.result_time = Date.now();
+                await saveStats(); broadcastStats();
                 await pushLogEvent(sym, 'BULLISH', `🎯 TP HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_HIT' });
                 broadcastAll();
                 return res.status(200).send("OK");
             }
-
             const foundPending = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (foundPending) {
-                foundPending.trade.status = 'TP_NO_ENTRY';
-                foundPending.trade.result_time = Date.now();
-                console.log(`  ⏭️ TP without entry: ${foundPending.trade.id} — NOT counted`);
-                await saveStats();
-                broadcastStats();
-                await pushLogEvent(sym, 'NONE', `⏭️ TP without entry: ${direction} ${entryTf} @ ${entry} — skipped`, { entry_tf: entryTf, direction, logAction: 'TP_NO_ENTRY' });
+                foundPending.trade.status = 'TP_NO_ENTRY'; foundPending.trade.result_time = Date.now();
+                await saveStats(); broadcastStats();
+                await pushLogEvent(sym, 'NONE', `⏭️ TP without entry: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_NO_ENTRY' });
                 broadcastAll();
-            } else {
-                console.log(`  ⚠️ TP_HIT — no trade found for ${sym} ${entryTf} ${direction}`);
             }
             return res.status(200).send("OK");
         }
 
         if (action === "SL_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
-            if (!stats) { console.log(`  ⚠️ No stats for ${sym} ${entryTf}`); return res.status(200).send("OK"); }
-
+            if (!stats) return res.status(200).send("OK");
             const foundActive = findBestTrade(stats, { direction, entry, allowedStatuses: ['ACTIVE'] });
             if (foundActive) {
-                foundActive.trade.status = 'SL_HIT';
-                foundActive.trade.result_time = Date.now();
-                console.log(`  💀 SL HIT: ${foundActive.trade.id}`);
-                await saveStats();
-                broadcastStats();
+                foundActive.trade.status = 'SL_HIT'; foundActive.trade.result_time = Date.now();
+                await saveStats(); broadcastStats();
                 await pushLogEvent(sym, 'BEARISH', `💀 SL HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_HIT' });
                 broadcastAll();
                 return res.status(200).send("OK");
             }
-
             const foundPending = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
             if (foundPending) {
-                foundPending.trade.status = 'SL_NO_ENTRY';
-                foundPending.trade.result_time = Date.now();
-                console.log(`  ⏭️ SL without entry: ${foundPending.trade.id} — NOT counted`);
-                await saveStats();
-                broadcastStats();
-                await pushLogEvent(sym, 'NONE', `⏭️ SL without entry: ${direction} ${entryTf} @ ${entry} — skipped`, { entry_tf: entryTf, direction, logAction: 'SL_NO_ENTRY' });
+                foundPending.trade.status = 'SL_NO_ENTRY'; foundPending.trade.result_time = Date.now();
+                await saveStats(); broadcastStats();
+                await pushLogEvent(sym, 'NONE', `⏭️ SL without entry: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_NO_ENTRY' });
                 broadcastAll();
-            } else {
-                console.log(`  ⚠️ SL_HIT — no trade found for ${sym} ${entryTf} ${direction}`);
             }
             return res.status(200).send("OK");
         }
 
-        console.warn(`[PINE] Unknown action: ${action}`);
         return res.status(400).send("Unknown action");
     }
 
@@ -805,7 +765,9 @@ app.listen(PORT, () => {
     console.log(`📊 Alignment: ${GOD_THRESHOLD}/6 = GOD, ${PARTIAL_THRESHOLD}/6 = PARTIAL`);
     console.log(`📡 Entry TFs: ${ENTRY_TFS.join(', ')}`);
     console.log(`📡 Combos: ${ALIGNMENT_COMBOS.length} tracked`);
-    console.log(`📡 Breakout 5/6:    ${TG_BREAKOUT_5OF6   || 'NOT SET'}`);
-    console.log(`📡 Breakout 6/6:    ${TG_BREAKOUT_6OF6   || 'NOT SET'}`);
+    console.log(`📡 Breakout 5/6: ${TG_BREAKOUT_5OF6 || 'NOT SET'}`);
+    console.log(`📡 Breakout 6/6: ${TG_BREAKOUT_6OF6 || 'NOT SET'}`);
     console.log(`📡 Breakout W+D+4H+1H: ${TG_BREAKOUT_WD4H1H || 'NOT SET'}`);
+    console.log(`📡 Custom Alignment: ${TG_CUSTOM_ALIGNMENT || 'NOT SET'}`);
+    console.log(`⚙️ Active Alignments: ${appSettings.activeAlignments.length > 0 ? appSettings.activeAlignments.join(', ') : 'NONE'}`);
 });
