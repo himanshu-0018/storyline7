@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>God-Mode Command Center v4</title>
+    <title>God-Mode Command Center v6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <style>
@@ -13,13 +13,10 @@
             background:#0a0e1a;color:#e2e8f0;
             overflow-x:hidden;min-height:100vh;
         }
-        .bg-container {
-            position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;
-        }
+        .bg-container { position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none; }
         .bg-photo {
             position:absolute;inset:0;
-            background-image:url('/bg.jpg');
-            background-size:cover;background-position:center;
+            background-image:url('/bg.jpg');background-size:cover;background-position:center;
             opacity:0.18;filter:brightness(1.1) saturate(1.3) hue-rotate(10deg);
             animation:bgZoom 50s ease-in-out infinite alternate;
         }
@@ -38,8 +35,7 @@
             background-image:
                 linear-gradient(rgba(99,102,241,0.06) 1px,transparent 1px),
                 linear-gradient(90deg,rgba(99,102,241,0.06) 1px,transparent 1px);
-            background-size:50px 50px;
-            animation:gridDrift 40s linear infinite;
+            background-size:50px 50px;animation:gridDrift 40s linear infinite;
         }
         @keyframes gridDrift { 0%{transform:translate(0,0);} 100%{transform:translate(50px,50px);} }
         .orb { position:absolute;border-radius:50%;filter:blur(60px);animation:orbFloat 15s ease-in-out infinite; }
@@ -55,8 +51,7 @@
         .scan-beam {
             position:absolute;left:0;right:0;height:1px;
             background:linear-gradient(90deg,transparent,rgba(99,102,241,0.6),rgba(14,165,233,0.8),rgba(99,102,241,0.6),transparent);
-            animation:scanMove 10s ease-in-out infinite;
-            box-shadow:0 0 20px rgba(99,102,241,0.4);
+            animation:scanMove 10s ease-in-out infinite;box-shadow:0 0 20px rgba(99,102,241,0.4);
         }
         @keyframes scanMove { 0%{top:0%;opacity:0;} 10%{opacity:1;} 90%{opacity:1;} 100%{top:100%;opacity:0;} }
         .candle-bar-bg {
@@ -68,6 +63,7 @@
         .cbar.r { background:linear-gradient(to top,#ef4444,#f87171); }
         @keyframes cbarGrow { 0%,100%{transform:scaleY(1);opacity:0.8;} 50%{transform:scaleY(1.12);opacity:1;} }
 
+        /* ── TOP BAR ── */
         .top-bar {
             position:relative;z-index:10;padding:16px 24px;
             display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
@@ -79,475 +75,194 @@
             background:linear-gradient(135deg,#818cf8,#38bdf8,#34d399);
             -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
         }
-        .brand-sub {
-            font-family:'JetBrains Mono',monospace;font-size:0.58rem;
-            color:rgba(148,163,184,0.65);letter-spacing:0.12em;margin-top:2px;
-        }
+        .brand-sub { font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:rgba(148,163,184,0.65);letter-spacing:0.12em;margin-top:2px; }
         .ctrl-btn {
-            display:inline-flex;align-items:center;gap:6px;
-            padding:7px 16px;border-radius:10px;
-            font-size:0.72rem;font-weight:700;letter-spacing:0.04em;
-            cursor:pointer;transition:all 0.2s ease;border:1px solid;
-            backdrop-filter:blur(10px);font-family:'JetBrains Mono',monospace;
+            display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:10px;
+            font-size:0.72rem;font-weight:700;letter-spacing:0.04em;cursor:pointer;
+            transition:all 0.2s ease;border:1px solid;backdrop-filter:blur(10px);
+            font-family:'JetBrains Mono',monospace;text-decoration:none;
         }
         .ctrl-btn:hover { transform:translateY(-2px); }
         .ctrl-btn:active { transform:translateY(0); }
-        .btn-inject {
-            background:linear-gradient(135deg,rgba(99,102,241,0.25),rgba(14,165,233,0.15));
-            border-color:rgba(99,102,241,0.5);color:#a5b4fc;
-            box-shadow:0 0 20px rgba(99,102,241,0.15);
-        }
-        .btn-inject:hover {
-            background:linear-gradient(135deg,rgba(99,102,241,0.4),rgba(14,165,233,0.25));
-            box-shadow:0 0 30px rgba(99,102,241,0.3);color:#c7d2fe;
-        }
-        .btn-stats {
-            background:linear-gradient(135deg,rgba(245,158,11,0.25),rgba(251,191,36,0.15));
-            border-color:rgba(245,158,11,0.5);color:#fbbf24;
-            box-shadow:0 0 20px rgba(245,158,11,0.15);
-        }
-        .btn-stats:hover {
-            background:linear-gradient(135deg,rgba(245,158,11,0.4),rgba(251,191,36,0.25));
-            box-shadow:0 0 30px rgba(245,158,11,0.3);color:#fde68a;
-        }
-        .btn-wdh {
-    background:linear-gradient(135deg,rgba(139,92,246,0.25),rgba(167,139,250,0.15));
-    border-color:rgba(139,92,246,0.5);color:#c4b5fd;
-    box-shadow:0 0 20px rgba(139,92,246,0.15);
-}
-.btn-wdh:hover {
-    background:linear-gradient(135deg,rgba(139,92,246,0.4),rgba(167,139,250,0.25));
-    box-shadow:0 0 30px rgba(139,92,246,0.3);color:#ddd6fe;
-}
-.btn-dh1h {
-    background:linear-gradient(135deg,rgba(6,182,212,0.25),rgba(34,211,238,0.15));
-    border-color:rgba(6,182,212,0.5);color:#67e8f9;
-    box-shadow:0 0 20px rgba(6,182,212,0.15);
-}
-.btn-dh1h:hover {
-    background:linear-gradient(135deg,rgba(6,182,212,0.4),rgba(34,211,238,0.25));
-    box-shadow:0 0 30px rgba(6,182,212,0.3);color:#a5f3fc;
-}
-        .btn-sound {
-            background:rgba(30,41,59,0.7);border-color:rgba(71,85,105,0.5);color:#94a3b8;
-        }
+        .btn-inject { background:linear-gradient(135deg,rgba(99,102,241,0.25),rgba(14,165,233,0.15));border-color:rgba(99,102,241,0.5);color:#a5b4fc;box-shadow:0 0 20px rgba(99,102,241,0.15); }
+        .btn-inject:hover { background:linear-gradient(135deg,rgba(99,102,241,0.4),rgba(14,165,233,0.25));box-shadow:0 0 30px rgba(99,102,241,0.3);color:#c7d2fe; }
+        .btn-stats { background:linear-gradient(135deg,rgba(245,158,11,0.25),rgba(251,191,36,0.15));border-color:rgba(245,158,11,0.5);color:#fbbf24;box-shadow:0 0 20px rgba(245,158,11,0.15); }
+        .btn-stats:hover { background:linear-gradient(135deg,rgba(245,158,11,0.4),rgba(251,191,36,0.25));box-shadow:0 0 30px rgba(245,158,11,0.3);color:#fde68a; }
+        .btn-wdh { background:linear-gradient(135deg,rgba(139,92,246,0.25),rgba(167,139,250,0.15));border-color:rgba(139,92,246,0.5);color:#c4b5fd;box-shadow:0 0 20px rgba(139,92,246,0.15); }
+        .btn-wdh:hover { background:linear-gradient(135deg,rgba(139,92,246,0.4),rgba(167,139,250,0.25));box-shadow:0 0 30px rgba(139,92,246,0.3);color:#ddd6fe; }
+        .btn-dh1h { background:linear-gradient(135deg,rgba(6,182,212,0.25),rgba(34,211,238,0.15));border-color:rgba(6,182,212,0.5);color:#67e8f9;box-shadow:0 0 20px rgba(6,182,212,0.15); }
+        .btn-dh1h:hover { background:linear-gradient(135deg,rgba(6,182,212,0.4),rgba(34,211,238,0.25));box-shadow:0 0 30px rgba(6,182,212,0.3);color:#a5f3fc; }
+        .btn-settings { background:linear-gradient(135deg,rgba(16,185,129,0.25),rgba(52,211,153,0.15));border-color:rgba(16,185,129,0.5);color:#34d399;box-shadow:0 0 20px rgba(16,185,129,0.15); }
+        .btn-settings:hover { background:linear-gradient(135deg,rgba(16,185,129,0.4),rgba(52,211,153,0.25));box-shadow:0 0 30px rgba(16,185,129,0.3);color:#6ee7b7; }
+        .btn-sound { background:rgba(30,41,59,0.7);border-color:rgba(71,85,105,0.5);color:#94a3b8; }
         .btn-sound:hover { border-color:rgba(100,116,139,0.8);color:#cbd5e1; }
-        .btn-sound.on {
-            background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(52,211,153,0.1));
-            border-color:rgba(16,185,129,0.5);color:#34d399;
-            box-shadow:0 0 20px rgba(16,185,129,0.15);
-        }
-        .btn-delete {
-            background:linear-gradient(135deg,rgba(239,68,68,0.25),rgba(153,27,27,0.15));
-            border-color:rgba(239,68,68,0.5);color:#fca5a5;
-            box-shadow:0 0 20px rgba(239,68,68,0.15);
-        }
-        .btn-delete:hover {
-            background:linear-gradient(135deg,rgba(239,68,68,0.4),rgba(153,27,27,0.25));
-            box-shadow:0 0 30px rgba(239,68,68,0.3);color:#fee2e2;
-        }
-        .stat-chip {
-            display:inline-flex;align-items:center;gap:8px;
-            padding:7px 14px;border-radius:10px;
-            background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.07);
-            backdrop-filter:blur(10px);
-        }
-        .live-badge {
-            display:inline-flex;align-items:center;gap:6px;
-            padding:7px 14px;border-radius:10px;
-            background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);
-            backdrop-filter:blur(10px);
-        }
+        .btn-sound.on { background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(52,211,153,0.1));border-color:rgba(16,185,129,0.5);color:#34d399;box-shadow:0 0 20px rgba(16,185,129,0.15); }
+        .btn-delete { background:linear-gradient(135deg,rgba(239,68,68,0.25),rgba(153,27,27,0.15));border-color:rgba(239,68,68,0.5);color:#fca5a5;box-shadow:0 0 20px rgba(239,68,68,0.15); }
+        .btn-delete:hover { background:linear-gradient(135deg,rgba(239,68,68,0.4),rgba(153,27,27,0.25));box-shadow:0 0 30px rgba(239,68,68,0.3);color:#fee2e2; }
+        .stat-chip { display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:10px;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(10px); }
+        .live-badge { display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);backdrop-filter:blur(10px); }
         .live-badge.offline { background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3); }
         .pulse-dot { width:7px;height:7px;border-radius:50%;background:#10b981;position:relative; }
-        .pulse-dot::after {
-            content:'';position:absolute;inset:-3px;border-radius:50%;
-            background:rgba(16,185,129,0.4);animation:pulseRing 1.5s ease-in-out infinite;
-        }
+        .pulse-dot::after { content:'';position:absolute;inset:-3px;border-radius:50%;background:rgba(16,185,129,0.4);animation:pulseRing 1.5s ease-in-out infinite; }
         .offline .pulse-dot { background:#ef4444; }
         .offline .pulse-dot::after { background:rgba(239,68,68,0.4); }
         @keyframes pulseRing { 0%,100%{transform:scale(0.9);opacity:0.9;} 50%{transform:scale(1.5);opacity:0;} }
 
+        /* ── STATS BAR ── */
         .stats-bar {
-            position:relative;z-index:10;
-            display:flex;align-items:center;gap:8px;padding:10px 24px;
-            border-bottom:1px solid rgba(255,255,255,0.05);
-            background:rgba(8,12,22,0.5);backdrop-filter:blur(10px);flex-wrap:wrap;
+            position:relative;z-index:10;display:flex;align-items:center;gap:8px;padding:10px 24px;
+            border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(8,12,22,0.5);backdrop-filter:blur(10px);flex-wrap:wrap;
         }
-        .stats-pill {
-            display:inline-flex;align-items:center;gap:5px;
-            padding:4px 12px;border-radius:999px;
-            font-size:0.68rem;font-weight:700;font-family:'JetBrains Mono',monospace;
-        }
+        .stats-pill { display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font-size:0.68rem;font-weight:700;font-family:'JetBrains Mono',monospace; }
         .sp-bull { background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399; }
         .sp-bear { background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171; }
         .sp-partial { background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24; }
+        .sp-custom { background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#34d399; }
         .sp-idle { background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);color:#a5b4fc; }
         .sp-total { background:rgba(14,165,233,0.12);border:1px solid rgba(14,165,233,0.25);color:#38bdf8; }
         .divider-v { width:1px;height:16px;background:rgba(255,255,255,0.1); }
 
-        .main-layout {
-            position:relative;z-index:10;
-            display:flex;gap:16px;padding:16px 24px;
-            flex:1;overflow:hidden;height:calc(100vh - 130px);
-        }
+        /* ── MAIN LAYOUT ── */
+        .main-layout { position:relative;z-index:10;display:flex;gap:16px;padding:16px 24px;flex:1;overflow:hidden;height:calc(100vh - 130px); }
         .coin-section { flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(99,102,241,0.3) transparent; }
         .coin-section::-webkit-scrollbar { width:4px; }
         .coin-section::-webkit-scrollbar-thumb { background:rgba(99,102,241,0.3);border-radius:4px; }
         .coin-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px; }
 
-        .coin-card {
-            border-radius:16px;padding:16px;position:relative;overflow:hidden;
-            transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:default;
-        }
-        .coin-card::before {
-            content:'';position:absolute;inset:0;border-radius:16px;padding:1px;
-            background:linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02));
-            -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
-            -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
-        }
+        /* ── COIN CARDS ── */
+        .coin-card { border-radius:16px;padding:16px;position:relative;overflow:hidden;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:default; }
+        .coin-card::before { content:'';position:absolute;inset:0;border-radius:16px;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none; }
         .coin-card:hover { transform:translateY(-4px) scale(1.01); }
-        .card-idle {
-            background:linear-gradient(135deg,rgba(15,23,42,0.85),rgba(20,30,55,0.80));
-            border:1px solid rgba(255,255,255,0.07);box-shadow:0 4px 20px rgba(0,0,0,0.3);
-            opacity:0.6;filter:saturate(0.7);
-        }
+        .card-idle { background:linear-gradient(135deg,rgba(15,23,42,0.85),rgba(20,30,55,0.80));border:1px solid rgba(255,255,255,0.07);box-shadow:0 4px 20px rgba(0,0,0,0.3);opacity:0.6;filter:saturate(0.7); }
         .card-idle:hover { opacity:0.85;filter:saturate(1); }
-        .card-bull {
-            background:linear-gradient(135deg,rgba(5,46,22,0.9) 0%,rgba(6,78,59,0.75) 50%,rgba(15,30,50,0.85) 100%);
-            border:1px solid rgba(16,185,129,0.4);
-            box-shadow:0 0 30px rgba(16,185,129,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(52,211,153,0.15);
-        }
-        .card-bull::after {
-            content:'';position:absolute;top:0;left:0;right:0;height:2px;
-            background:linear-gradient(90deg,transparent,#10b981,#34d399,#10b981,transparent);
-            animation:shimmer 3s ease-in-out infinite;
-        }
-        .card-bear {
-            background:linear-gradient(135deg,rgba(69,10,10,0.9) 0%,rgba(127,29,29,0.75) 50%,rgba(15,20,45,0.85) 100%);
-            border:1px solid rgba(239,68,68,0.4);
-            box-shadow:0 0 30px rgba(239,68,68,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(248,113,113,0.15);
-        }
-        .card-bear::after {
-            content:'';position:absolute;top:0;left:0;right:0;height:2px;
-            background:linear-gradient(90deg,transparent,#ef4444,#f87171,#ef4444,transparent);
-            animation:shimmer 3s ease-in-out infinite;
-        }
-        .card-partial-bull {
-            background:linear-gradient(135deg,rgba(6,55,30,0.88) 0%,rgba(8,95,70,0.62) 50%,rgba(15,30,50,0.82) 100%);
-            border:1px solid rgba(52,211,153,0.35);
-            box-shadow:0 0 26px rgba(52,211,153,0.10),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(110,231,183,0.12);
-        }
-        .card-partial-bull::after {
-            content:'';position:absolute;top:0;left:0;right:0;height:2px;
-            background:linear-gradient(90deg,transparent,#34d399,#6ee7b7,#34d399,transparent);
-            animation:shimmer 3s ease-in-out infinite;
-        }
-
-        .card-partial-bear {
-            background:linear-gradient(135deg,rgba(80,18,18,0.88) 0%,rgba(140,45,45,0.62) 50%,rgba(20,22,50,0.82) 100%);
-            border:1px solid rgba(248,113,113,0.35);
-            box-shadow:0 0 26px rgba(248,113,113,0.10),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(252,165,165,0.12);
-        }
-        .card-partial-bear::after {
-            content:'';position:absolute;top:0;left:0;right:0;height:2px;
-            background:linear-gradient(90deg,transparent,#f87171,#fca5a5,#f87171,transparent);
-            animation:shimmer 3s ease-in-out infinite;
-        }
-        .card-wdh-bull {
-    background:linear-gradient(135deg,rgba(4,55,30,0.90) 0%,rgba(5,90,60,0.70) 50%,rgba(15,30,50,0.85) 100%);
-    border:1px solid rgba(52,211,153,0.5);
-    box-shadow:0 0 28px rgba(52,211,153,0.14),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(110,231,183,0.18);
-}
-.card-wdh-bull::after {
-    content:'';position:absolute;top:0;left:0;right:0;height:2px;
-    background:linear-gradient(90deg,transparent,#34d399,#6ee7b7,#34d399,transparent);
-    animation:shimmer 3s ease-in-out infinite;
-}
-.card-wdh-bear {
-    background:linear-gradient(135deg,rgba(80,10,10,0.90) 0%,rgba(130,35,35,0.70) 50%,rgba(20,18,50,0.85) 100%);
-    border:1px solid rgba(252,165,165,0.5);
-    box-shadow:0 0 28px rgba(252,165,165,0.14),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(254,202,202,0.18);
-}
-.card-wdh-bear::after {
-    content:'';position:absolute;top:0;left:0;right:0;height:2px;
-    background:linear-gradient(90deg,transparent,#fca5a5,#fecaca,#fca5a5,transparent);
-    animation:shimmer 3s ease-in-out infinite;
-}
-.card-d4h-bull {
-    background:linear-gradient(135deg,rgba(3,50,50,0.90) 0%,rgba(4,80,80,0.68) 50%,rgba(15,28,50,0.85) 100%);
-    border:1px solid rgba(34,211,238,0.45);
-    box-shadow:0 0 26px rgba(34,211,238,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(103,232,249,0.15);
-}
-.card-d4h-bull::after {
-    content:'';position:absolute;top:0;left:0;right:0;height:2px;
-    background:linear-gradient(90deg,transparent,#22d3ee,#67e8f9,#22d3ee,transparent);
-    animation:shimmer 3s ease-in-out infinite;
-}
-.card-d4h-bear {
-    background:linear-gradient(135deg,rgba(60,10,60,0.90) 0%,rgba(100,20,100,0.68) 50%,rgba(20,15,50,0.85) 100%);
-    border:1px solid rgba(192,132,252,0.45);
-    box-shadow:0 0 26px rgba(192,132,252,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(216,180,254,0.15);
-}
-.card-d4h-bear::after {
-    content:'';position:absolute;top:0;left:0;right:0;height:2px;
-    background:linear-gradient(90deg,transparent,#c084fc,#d8b4fe,#c084fc,transparent);
-    animation:shimmer 3s ease-in-out infinite;
-}
-
-/* New badges */
-.card-badge-wdh-bull {
-    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-    padding:3px 8px;border-radius:6px;
-    background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(110,231,183,0.12));
-    border:1px solid rgba(110,231,183,0.45);color:#6ee7b7;
-}
-.card-badge-wdh-bear {
-    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-    padding:3px 8px;border-radius:6px;
-    background:linear-gradient(135deg,rgba(252,165,165,0.25),rgba(254,202,202,0.12));
-    border:1px solid rgba(254,202,202,0.45);color:#fecaca;
-}
-.card-badge-d4h-bull {
-    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-    padding:3px 8px;border-radius:6px;
-    background:linear-gradient(135deg,rgba(34,211,238,0.25),rgba(103,232,249,0.12));
-    border:1px solid rgba(103,232,249,0.45);color:#67e8f9;
-}
-.card-badge-d4h-bear {
-    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-    padding:3px 8px;border-radius:6px;
-    background:linear-gradient(135deg,rgba(192,132,252,0.25),rgba(216,180,254,0.12));
-    border:1px solid rgba(216,180,254,0.45);color:#d8b4fe;
-}
-
-/* New align bars */
-.align-bar-wdh-bull { background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#6ee7b7; }
-.align-bar-wdh-bear { background:rgba(252,165,165,0.12);border:1px solid rgba(252,165,165,0.3);color:#fecaca; }
-.align-bar-d4h-bull { background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.3);color:#67e8f9; }
-.align-bar-d4h-bear { background:rgba(192,132,252,0.12);border:1px solid rgba(192,132,252,0.3);color:#d8b4fe; }
+        .card-bull { background:linear-gradient(135deg,rgba(5,46,22,0.9) 0%,rgba(6,78,59,0.75) 50%,rgba(15,30,50,0.85) 100%);border:1px solid rgba(16,185,129,0.4);box-shadow:0 0 30px rgba(16,185,129,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(52,211,153,0.15); }
+        .card-bull::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#10b981,#34d399,#10b981,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-bear { background:linear-gradient(135deg,rgba(69,10,10,0.9) 0%,rgba(127,29,29,0.75) 50%,rgba(15,20,45,0.85) 100%);border:1px solid rgba(239,68,68,0.4);box-shadow:0 0 30px rgba(239,68,68,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(248,113,113,0.15); }
+        .card-bear::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#ef4444,#f87171,#ef4444,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-partial-bull { background:linear-gradient(135deg,rgba(6,55,30,0.88) 0%,rgba(8,95,70,0.62) 50%,rgba(15,30,50,0.82) 100%);border:1px solid rgba(52,211,153,0.35);box-shadow:0 0 26px rgba(52,211,153,0.10),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(110,231,183,0.12); }
+        .card-partial-bull::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#34d399,#6ee7b7,#34d399,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-partial-bear { background:linear-gradient(135deg,rgba(80,18,18,0.88) 0%,rgba(140,45,45,0.62) 50%,rgba(20,22,50,0.82) 100%);border:1px solid rgba(248,113,113,0.35);box-shadow:0 0 26px rgba(248,113,113,0.10),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(252,165,165,0.12); }
+        .card-partial-bear::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#f87171,#fca5a5,#f87171,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-wdh-bull { background:linear-gradient(135deg,rgba(4,55,30,0.90) 0%,rgba(5,90,60,0.70) 50%,rgba(15,30,50,0.85) 100%);border:1px solid rgba(52,211,153,0.5);box-shadow:0 0 28px rgba(52,211,153,0.14),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(110,231,183,0.18); }
+        .card-wdh-bull::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#34d399,#6ee7b7,#34d399,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-wdh-bear { background:linear-gradient(135deg,rgba(80,10,10,0.90) 0%,rgba(130,35,35,0.70) 50%,rgba(20,18,50,0.85) 100%);border:1px solid rgba(252,165,165,0.5);box-shadow:0 0 28px rgba(252,165,165,0.14),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(254,202,202,0.18); }
+        .card-wdh-bear::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#fca5a5,#fecaca,#fca5a5,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-d4h-bull { background:linear-gradient(135deg,rgba(3,50,50,0.90) 0%,rgba(4,80,80,0.68) 50%,rgba(15,28,50,0.85) 100%);border:1px solid rgba(34,211,238,0.45);box-shadow:0 0 26px rgba(34,211,238,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(103,232,249,0.15); }
+        .card-d4h-bull::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#22d3ee,#67e8f9,#22d3ee,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-d4h-bear { background:linear-gradient(135deg,rgba(60,10,60,0.90) 0%,rgba(100,20,100,0.68) 50%,rgba(20,15,50,0.85) 100%);border:1px solid rgba(192,132,252,0.45);box-shadow:0 0 26px rgba(192,132,252,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(216,180,254,0.15); }
+        .card-d4h-bear::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c084fc,#d8b4fe,#c084fc,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-custom-bull { background:linear-gradient(135deg,rgba(4,55,30,0.90) 0%,rgba(5,90,60,0.70) 50%,rgba(15,30,50,0.85) 100%);border:1px solid rgba(52,211,153,0.5);box-shadow:0 0 28px rgba(52,211,153,0.14),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(110,231,183,0.18); }
+        .card-custom-bull::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#34d399,#6ee7b7,#34d399,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-custom-bear { background:linear-gradient(135deg,rgba(80,10,10,0.90) 0%,rgba(130,35,35,0.70) 50%,rgba(20,18,50,0.85) 100%);border:1px solid rgba(252,165,165,0.5);box-shadow:0 0 28px rgba(252,165,165,0.14),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(254,202,202,0.18); }
+        .card-custom-bear::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#fca5a5,#fecaca,#fca5a5,transparent);animation:shimmer 3s ease-in-out infinite; }
         @keyframes shimmer { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
 
+        /* ── BADGES ── */
         .card-symbol { font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:0.02em;line-height:1; }
-        .card-badge-bull {
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-            padding:3px 8px;border-radius:6px;
-            background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(52,211,153,0.15));
-            border:1px solid rgba(52,211,153,0.4);color:#6ee7b7;
-        }
-        .card-badge-bear {
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-            padding:3px 8px;border-radius:6px;
-            background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(248,113,113,0.15));
-            border:1px solid rgba(248,113,113,0.4);color:#fca5a5;
-        }
-        .card-badge-partial-bull {
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-            padding:3px 8px;border-radius:6px;
-            background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(110,231,183,0.12));
-            border:1px solid rgba(110,231,183,0.35);
-            color:#a7f3d0;
-        }
+        .card-badge-bull { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(52,211,153,0.15));border:1px solid rgba(52,211,153,0.4);color:#6ee7b7; }
+        .card-badge-bear { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(248,113,113,0.15));border:1px solid rgba(248,113,113,0.4);color:#fca5a5; }
+        .card-badge-partial-bull { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(110,231,183,0.12));border:1px solid rgba(110,231,183,0.35);color:#a7f3d0; }
+        .card-badge-partial-bear { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(248,113,113,0.25),rgba(252,165,165,0.12));border:1px solid rgba(252,165,165,0.35);color:#fecaca; }
+        .card-badge-wdh-bull { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(110,231,183,0.12));border:1px solid rgba(110,231,183,0.45);color:#6ee7b7; }
+        .card-badge-wdh-bear { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(252,165,165,0.25),rgba(254,202,202,0.12));border:1px solid rgba(254,202,202,0.45);color:#fecaca; }
+        .card-badge-d4h-bull { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(34,211,238,0.25),rgba(103,232,249,0.12));border:1px solid rgba(103,232,249,0.45);color:#67e8f9; }
+        .card-badge-d4h-bear { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(192,132,252,0.25),rgba(216,180,254,0.12));border:1px solid rgba(216,180,254,0.45);color:#d8b4fe; }
+        .card-badge-custom-bull { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(16,185,129,0.25),rgba(52,211,153,0.12));border:1px solid rgba(52,211,153,0.5);color:#34d399; }
+        .card-badge-custom-bear { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(252,165,165,0.25),rgba(254,202,202,0.12));border:1px solid rgba(252,165,165,0.5);color:#fca5a5; }
+        .card-badge-idle { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:rgba(71,85,105,0.3);border:1px solid rgba(71,85,105,0.4);color:#64748b; }
+        .card-time { font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:rgba(148,163,184,0.5);letter-spacing:0.06em;margin-top:4px; }
 
-        .card-badge-partial-bear {
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-            padding:3px 8px;border-radius:6px;
-            background:linear-gradient(135deg,rgba(248,113,113,0.25),rgba(252,165,165,0.12));
-            border:1px solid rgba(252,165,165,0.35);
-            color:#fecaca;
-        }
-        .card-badge-idle {
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
-            padding:3px 8px;border-radius:6px;
-            background:rgba(71,85,105,0.3);border:1px solid rgba(71,85,105,0.4);color:#64748b;
-        }
-        .card-time {
-            font-family:'JetBrains Mono',monospace;font-size:0.52rem;
-            color:rgba(148,163,184,0.5);letter-spacing:0.06em;margin-top:4px;
-        }
-
-        /* 6-column TF row */
+        /* ── TF ROW ── */
         .tf-row { display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:10px; }
-        .tf-cell {
-            padding:7px 4px;border-radius:9px;
-            font-family:'JetBrains Mono',monospace;font-size:0.50rem;
-        }
-        .tf-cell-bull {
-            background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));
-            border:1px solid rgba(16,185,129,0.25);
-        }
-        .tf-cell-bear {
-            background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));
-            border:1px solid rgba(239,68,68,0.25);
-        }
+        .tf-cell { padding:7px 4px;border-radius:9px;font-family:'JetBrains Mono',monospace;font-size:0.50rem; }
+        .tf-cell-bull { background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.25); }
+        .tf-cell-bear { background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.25); }
         .tf-cell-none { background:rgba(15,23,42,0.5);border:1px solid rgba(71,85,105,0.2); }
-        .align-bar {
-            margin-top:8px;padding:6px 10px;border-radius:8px;
-            font-family:'JetBrains Mono',monospace;font-size:0.55rem;
-            display:flex;align-items:center;gap:8px;
-        }
+
+        /* ── ALIGN BARS ── */
+        .align-bar { margin-top:8px;padding:6px 10px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.55rem;display:flex;align-items:center;gap:8px; }
         .align-bar-god { background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399; }
-        .align-bar-partial-bull {
-            background:rgba(52,211,153,0.12);
-            border:1px solid rgba(52,211,153,0.28);
-            color:#6ee7b7;
-        }
-        .align-bar-partial-bear {
-            background:rgba(248,113,113,0.12);
-            border:1px solid rgba(248,113,113,0.28);
-            color:#fca5a5;
-        }
+        .align-bar-partial-bull { background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.28);color:#6ee7b7; }
+        .align-bar-partial-bear { background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.28);color:#fca5a5; }
+        .align-bar-wdh-bull { background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#6ee7b7; }
+        .align-bar-wdh-bear { background:rgba(252,165,165,0.12);border:1px solid rgba(252,165,165,0.3);color:#fecaca; }
+        .align-bar-d4h-bull { background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.3);color:#67e8f9; }
+        .align-bar-d4h-bear { background:rgba(192,132,252,0.12);border:1px solid rgba(192,132,252,0.3);color:#d8b4fe; }
+        .align-bar-custom-bull { background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#34d399; }
+        .align-bar-custom-bear { background:rgba(252,165,165,0.12);border:1px solid rgba(252,165,165,0.3);color:#fca5a5; }
         .align-bar-none { background:rgba(71,85,105,0.15);border:1px solid rgba(71,85,105,0.3);color:#64748b; }
 
-        .feed-panel {
-            width:280px;flex-shrink:0;
-            display:flex;flex-direction:column;border-radius:16px;overflow:hidden;
-            border:1px solid rgba(255,255,255,0.07);
-            background:rgba(8,12,22,0.85);backdrop-filter:blur(24px);
-        }
-        .feed-header {
-            padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);
-            background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(14,165,233,0.08));
-            display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-        }
+        /* ── FEED PANEL ── */
+        .feed-panel { width:280px;flex-shrink:0;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);background:rgba(8,12,22,0.85);backdrop-filter:blur(24px); }
+        .feed-header { padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(14,165,233,0.08));display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
         .feed-title { font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;color:#a5b4fc;letter-spacing:0.1em; }
-        .feed-body {
-            flex:1;overflow-y:auto;padding:10px;
-            display:flex;flex-direction:column;gap:8px;
-            scrollbar-width:thin;scrollbar-color:rgba(99,102,241,0.3) transparent;
-        }
-        .log-card-bull,.log-card-bear,.log-card-none {
-            padding:10px 12px;border-radius:10px;animation:logSlide 0.3s ease-out;
-        }
-        .log-card-bull {
-            background:linear-gradient(135deg,rgba(5,46,22,0.8),rgba(6,78,59,0.4));
-            border:1px solid rgba(16,185,129,0.25);border-left:3px solid #10b981;
-        }
-        .log-card-bear {
-            background:linear-gradient(135deg,rgba(69,10,10,0.8),rgba(127,29,29,0.4));
-            border:1px solid rgba(239,68,68,0.25);border-left:3px solid #ef4444;
-        }
-        .log-card-none {
-            background:rgba(30,41,59,0.6);
-            border:1px solid rgba(245,158,11,0.25);border-left:3px solid #f59e0b;
-        }
+        .feed-body { flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(99,102,241,0.3) transparent; }
+        .log-card-bull,.log-card-bear,.log-card-none { padding:10px 12px;border-radius:10px;animation:logSlide 0.3s ease-out; }
+        .log-card-bull { background:linear-gradient(135deg,rgba(5,46,22,0.8),rgba(6,78,59,0.4));border:1px solid rgba(16,185,129,0.25);border-left:3px solid #10b981; }
+        .log-card-bear { background:linear-gradient(135deg,rgba(69,10,10,0.8),rgba(127,29,29,0.4));border:1px solid rgba(239,68,68,0.25);border-left:3px solid #ef4444; }
+        .log-card-none { background:rgba(30,41,59,0.6);border:1px solid rgba(245,158,11,0.25);border-left:3px solid #f59e0b; }
         @keyframes logSlide { from{opacity:0;transform:translateX(12px);} to{opacity:1;transform:translateX(0);} }
         .log-sym { font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;color:#f1f5f9; }
         .log-msg { font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:rgba(203,213,225,0.75);margin-top:3px; }
         .log-time { font-family:'JetBrains Mono',monospace;font-size:0.55rem; }
 
-        /* ── MODAL BASE ── */
-        .modal-backdrop {
-            position:fixed;inset:0;z-index:100;
-            background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);
-            display:none;align-items:center;justify-content:center;padding:16px;
-        }
-        .modal-box {
-            background:linear-gradient(135deg,rgba(10,14,26,0.98),rgba(15,20,40,0.98));
-            border:1px solid rgba(99,102,241,0.3);border-radius:20px;
-            padding:28px;width:100%;max-width:520px;position:relative;
-            box-shadow:0 0 60px rgba(99,102,241,0.2),0 40px 80px rgba(0,0,0,0.6);
-            max-height:90vh;overflow-y:auto;
-        }
-        .modal-box::before {
-            content:'';position:absolute;top:0;left:0;right:0;height:1px;border-radius:20px 20px 0 0;
-            background:linear-gradient(90deg,transparent,rgba(99,102,241,0.6),rgba(14,165,233,0.6),transparent);
-        }
+        /* ── MODALS ── */
+        .modal-backdrop { position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:16px; }
+        .modal-box { background:linear-gradient(135deg,rgba(10,14,26,0.98),rgba(15,20,40,0.98));border:1px solid rgba(99,102,241,0.3);border-radius:20px;padding:28px;width:100%;max-width:520px;position:relative;box-shadow:0 0 60px rgba(99,102,241,0.2),0 40px 80px rgba(0,0,0,0.6);max-height:90vh;overflow-y:auto; }
+        .modal-box::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,transparent,rgba(99,102,241,0.6),rgba(14,165,233,0.6),transparent); }
         .modal-box.delete-theme { border-color:rgba(239,68,68,0.3);box-shadow:0 0 60px rgba(239,68,68,0.2),0 40px 80px rgba(0,0,0,0.6); }
         .modal-box.delete-theme::before { background:linear-gradient(90deg,transparent,rgba(239,68,68,0.6),rgba(248,113,113,0.6),transparent); }
+        .modal-box.settings-theme { border-color:rgba(16,185,129,0.3);box-shadow:0 0 60px rgba(16,185,129,0.2),0 40px 80px rgba(0,0,0,0.6); }
+        .modal-box.settings-theme::before { background:linear-gradient(90deg,transparent,rgba(16,185,129,0.6),rgba(52,211,153,0.6),transparent); }
         .modal-title { font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:4px; }
         .modal-sub { font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.55);margin-bottom:20px; }
-        .field-label {
-            font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:700;
-            text-transform:uppercase;letter-spacing:0.1em;color:rgba(148,163,184,0.6);
-            display:block;margin-bottom:5px;
-        }
-        .field-input {
-            width:100%;padding:10px 14px;
-            background:rgba(15,23,42,0.8);border:1px solid rgba(99,102,241,0.25);
-            border-radius:10px;color:#e2e8f0;
-            font-family:'JetBrains Mono',monospace;font-size:0.85rem;
-            outline:none;transition:all 0.2s;margin-bottom:14px;
-        }
+        .field-label { font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(148,163,184,0.6);display:block;margin-bottom:5px; }
+        .field-input { width:100%;padding:10px 14px;background:rgba(15,23,42,0.8);border:1px solid rgba(99,102,241,0.25);border-radius:10px;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:0.85rem;outline:none;transition:all 0.2s;margin-bottom:14px; }
         .field-input:focus { border-color:rgba(99,102,241,0.6);box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
         .delete-input:focus { border-color:rgba(239,68,68,0.6)!important;box-shadow:0 0 0 3px rgba(239,68,68,0.1)!important; }
-        .btn-cancel {
-            flex:1;padding:11px;border-radius:10px;
-            border:1px solid rgba(71,85,105,0.5);color:#94a3b8;background:rgba(15,23,42,0.5);
-            font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;
-            cursor:pointer;transition:all 0.2s;
-        }
+        .btn-cancel { flex:1;padding:11px;border-radius:10px;border:1px solid rgba(71,85,105,0.5);color:#94a3b8;background:rgba(15,23,42,0.5);font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s; }
         .btn-cancel:hover { border-color:rgba(100,116,139,0.8);color:#cbd5e1; }
-        .btn-inject-modal {
-            flex:1;padding:11px;border-radius:10px;
-            background:linear-gradient(135deg,rgba(99,102,241,0.3),rgba(14,165,233,0.2));
-            border:1px solid rgba(99,102,241,0.5);color:#a5b4fc;
-            font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;
-            cursor:pointer;transition:all 0.2s;
-        }
-        .btn-inject-modal:hover {
-            background:linear-gradient(135deg,rgba(99,102,241,0.5),rgba(14,165,233,0.35));
-            color:#c7d2fe;box-shadow:0 0 20px rgba(99,102,241,0.25);
-        }
-        .btn-delete-modal {
-            flex:1;padding:11px;border-radius:10px;
-            background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(153,27,27,0.2));
-            border:1px solid rgba(239,68,68,0.5);color:#fca5a5;
-            font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;
-            cursor:pointer;transition:all 0.2s;
-        }
-        .btn-delete-modal:hover {
-            background:linear-gradient(135deg,rgba(239,68,68,0.5),rgba(153,27,27,0.35));
-            color:#fee2e2;box-shadow:0 0 20px rgba(239,68,68,0.25);
-        }
+        .btn-inject-modal { flex:1;padding:11px;border-radius:10px;background:linear-gradient(135deg,rgba(99,102,241,0.3),rgba(14,165,233,0.2));border:1px solid rgba(99,102,241,0.5);color:#a5b4fc;font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s; }
+        .btn-inject-modal:hover { background:linear-gradient(135deg,rgba(99,102,241,0.5),rgba(14,165,233,0.35));color:#c7d2fe; }
+        .btn-delete-modal { flex:1;padding:11px;border-radius:10px;background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(153,27,27,0.2));border:1px solid rgba(239,68,68,0.5);color:#fca5a5;font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s; }
+        .btn-delete-modal:hover { background:linear-gradient(135deg,rgba(239,68,68,0.5),rgba(153,27,27,0.35));color:#fee2e2; }
+        .btn-save-settings { flex:1;padding:11px;border-radius:10px;background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(52,211,153,0.2));border:1px solid rgba(16,185,129,0.5);color:#34d399;font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s; }
+        .btn-save-settings:hover { background:linear-gradient(135deg,rgba(16,185,129,0.5),rgba(52,211,153,0.35));color:#6ee7b7; }
 
-        /* ── INJECT TF ROW ── */
-        .inject-tf-block {
-            padding:12px 14px;border-radius:12px;margin-bottom:10px;
-            background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);
-            display:flex;align-items:center;justify-content:space-between;
-        }
-        .inject-tf-title {
-            font-family:'Orbitron',sans-serif;font-size:0.72rem;font-weight:700;
-            color:#a5b4fc;letter-spacing:0.08em;
-        }
-        .inject-state-select {
-            padding:5px 10px;border-radius:8px;
-            background:rgba(15,23,42,0.8);border:1px solid rgba(99,102,241,0.3);
-            color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:0.75rem;
-            cursor:pointer;outline:none;transition:all 0.2s;
-        }
-        .inject-state-select:focus { border-color:rgba(99,102,241,0.6);box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
-
-        /* Quick-fill buttons */
-        .quick-fill-row {
-            display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;
-        }
-        .quick-btn {
-            padding:5px 12px;border-radius:8px;
-            font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:700;
-            cursor:pointer;transition:all 0.2s;border:1px solid;letter-spacing:0.04em;
-        }
-        .quick-btn-bull {
-            background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);color:#34d399;
-        }
+        /* ── INJECT TF BLOCKS ── */
+        .inject-tf-block { padding:12px 14px;border-radius:12px;margin-bottom:10px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between; }
+        .inject-tf-title { font-family:'Orbitron',sans-serif;font-size:0.72rem;font-weight:700;color:#a5b4fc;letter-spacing:0.08em; }
+        .inject-state-select { padding:5px 10px;border-radius:8px;background:rgba(15,23,42,0.8);border:1px solid rgba(99,102,241,0.3);color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:0.75rem;cursor:pointer;outline:none;transition:all 0.2s; }
+        .inject-state-select:focus { border-color:rgba(99,102,241,0.6); }
+        .quick-fill-row { display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap; }
+        .quick-btn { padding:5px 12px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:700;cursor:pointer;transition:all 0.2s;border:1px solid;letter-spacing:0.04em; }
+        .quick-btn-bull { background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);color:#34d399; }
         .quick-btn-bull:hover { background:rgba(16,185,129,0.3);color:#6ee7b7; }
-        .quick-btn-bear {
-            background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;
-        }
+        .quick-btn-bear { background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171; }
         .quick-btn-bear:hover { background:rgba(239,68,68,0.3);color:#fca5a5; }
-        .quick-btn-none {
-            background:rgba(71,85,105,0.15);border-color:rgba(71,85,105,0.4);color:#94a3b8;
-        }
+        .quick-btn-none { background:rgba(71,85,105,0.15);border-color:rgba(71,85,105,0.4);color:#94a3b8; }
         .quick-btn-none:hover { background:rgba(71,85,105,0.3);color:#cbd5e1; }
-
-        .inject-progress {
-            font-family:'JetBrains Mono',monospace;font-size:0.6rem;
-            color:rgba(148,163,184,0.5);text-align:center;margin-top:8px;display:none;
-        }
+        .inject-progress { font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:rgba(148,163,184,0.5);text-align:center;margin-top:8px;display:none; }
         .inject-progress.active { display:block; }
         .inject-progress .done { color:#34d399; }
         .inject-progress .fail { color:#f87171; }
+
+        /* ── SETTINGS MODAL ── */
+        .settings-combo-item { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.2s; }
+        .settings-combo-item:hover { border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.05); }
+        .settings-combo-item.active { border-color:rgba(16,185,129,0.5);background:rgba(16,185,129,0.08); }
+        .settings-combo-check { width:18px;height:18px;border-radius:5px;border:2px solid rgba(71,85,105,0.5);display:flex;align-items:center;justify-content:center;font-size:0.7rem;transition:all 0.2s;flex-shrink:0;color:transparent; }
+        .settings-combo-item.active .settings-combo-check { border-color:#34d399;background:rgba(16,185,129,0.3);color:#34d399; }
+        .settings-combo-label { font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:700;color:#e2e8f0; }
+        .settings-combo-tfs { font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:rgba(148,163,184,0.4);margin-top:2px; }
+        .settings-active-badge { font-family:'JetBrains Mono',monospace;font-size:0.55rem;padding:2px 8px;border-radius:999px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399;margin-left:auto;white-space:nowrap; }
+        .settings-status { font-family:'JetBrains Mono',monospace;font-size:0.6rem;text-align:center;margin-top:8px;min-height:18px; }
+        .settings-select-row { display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap; }
+        .settings-select-btn { padding:4px 10px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:0.58rem;font-weight:700;cursor:pointer;border:1px solid;transition:all 0.2s; }
+        .settings-select-all { background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);color:#34d399; }
+        .settings-select-all:hover { background:rgba(16,185,129,0.3); }
+        .settings-select-none { background:rgba(71,85,105,0.15);border-color:rgba(71,85,105,0.4);color:#94a3b8; }
+        .settings-select-none:hover { background:rgba(71,85,105,0.3); }
 
         @keyframes toastUp { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
         .toast { animation:toastUp 0.15s ease-out forwards; }
@@ -560,11 +275,8 @@
 <body style="display:flex;flex-direction:column;height:100vh;overflow:hidden;">
 
     <div class="bg-container">
-        <div class="bg-photo"></div>
-        <div class="bg-gradient"></div>
-        <div class="bg-grid"></div>
-        <div class="orb orb-1"></div><div class="orb orb-2"></div>
-        <div class="orb orb-3"></div><div class="orb orb-4"></div>
+        <div class="bg-photo"></div><div class="bg-gradient"></div><div class="bg-grid"></div>
+        <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div><div class="orb orb-4"></div>
         <div class="scan-beam"></div>
         <div class="candle-bar-bg">
             <div class="cbar g" style="height:45%"></div><div class="cbar r" style="height:60%;animation-delay:.3s"></div>
@@ -580,23 +292,22 @@
         </div>
     </div>
 
+    <!-- TOP BAR -->
     <div class="top-bar">
         <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;
-                background:linear-gradient(135deg,#6366f1,#0ea5e9,#10b981);
-                display:flex;align-items:center;justify-content:center;font-size:1.3rem;
-                animation:logoGlow 4s ease-in-out infinite;">⚡</div>
+            <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,#6366f1,#0ea5e9,#10b981);display:flex;align-items:center;justify-content:center;font-size:1.3rem;animation:logoGlow 4s ease-in-out infinite;">⚡</div>
             <div>
                 <div class="brand-name">GOD-MODE TERMINAL</div>
-                <div class="brand-sub">LIVE ALIGNMENT ENGINE · v5 · 1W+1D+4H+1H+30M+15M · 6/6=GOD · 5/6=PARTIAL · 5M ENTRIES</div>
+                <div class="brand-sub">LIVE ALIGNMENT ENGINE · v6 · CONFIGURABLE COMBOS · 6/6=GOD · 5/6=PARTIAL</div>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <button onclick="openModal()" class="ctrl-btn btn-inject"><span>⚡</span> INJECT</button>
-    <a href="/stats" class="ctrl-btn btn-stats" style="text-decoration:none;"><span>📊</span> STATISTICS</a>
-    <a href="/wdh" class="ctrl-btn btn-wdh" style="text-decoration:none;"><span>🔱</span> W+D+4H</a>
-    <a href="/dh1h" class="ctrl-btn btn-dh1h" style="text-decoration:none;"><span>⚔️</span> D+4H+1H</a>
-    <button onclick="openDeleteModal()" class="ctrl-btn btn-delete"><span>🗑️</span> PURGE</button>
+            <a href="/stats" class="ctrl-btn btn-stats" style="text-decoration:none;"><span>📊</span> STATISTICS</a>
+            <a href="/wdh" class="ctrl-btn btn-wdh" style="text-decoration:none;"><span>🔱</span> W+D+4H</a>
+            <a href="/dh1h" class="ctrl-btn btn-dh1h" style="text-decoration:none;"><span>⚔️</span> D+4H+1H</a>
+            <button onclick="openSettingsModal()" class="ctrl-btn btn-settings"><span>⚙️</span> ALIGNMENT</button>
+            <button onclick="openDeleteModal()" class="ctrl-btn btn-delete"><span>🗑️</span> PURGE</button>
             <button id="audioBtn" onclick="toggleAudio()" class="ctrl-btn btn-sound">
                 <span id="audioIco">🔇</span><span id="audioTxt">SOUND OFF</span>
             </button>
@@ -611,23 +322,24 @@
         </div>
     </div>
 
+    <!-- STATS BAR -->
     <div class="stats-bar">
         <span style="font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:rgba(148,163,184,0.35);letter-spacing:0.12em;text-transform:uppercase;">Market Scan</span>
         <div class="divider-v"></div>
         <span id="bullPill" class="stats-pill sp-bull">🐂 0 GOD BULL</span>
         <span id="bearPill" class="stats-pill sp-bear">🐻 0 GOD BEAR</span>
         <span id="partialPill" class="stats-pill sp-partial">⚡ 0 PARTIAL</span>
+        <span id="customPill" class="stats-pill sp-custom">⚙️ 0 CUSTOM</span>
         <span id="idlePill" class="stats-pill sp-idle">⏳ 0 IDLE</span>
         <div class="divider-v"></div>
         <span id="totalPill" class="stats-pill sp-total">📊 0 TRACKED</span>
     </div>
 
+    <!-- MAIN LAYOUT -->
     <div class="main-layout">
         <div class="coin-section">
             <div class="coin-grid" id="coinGrid">
-                <p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(148,163,184,0.3);grid-column:1/-1;text-align:center;padding:40px 0;">
-                    Awaiting TradingView webhooks...
-                </p>
+                <p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(148,163,184,0.3);grid-column:1/-1;text-align:center;padding:40px 0;">Awaiting TradingView webhooks...</p>
             </div>
         </div>
         <div class="feed-panel">
@@ -641,25 +353,21 @@
         </div>
     </div>
 
+    <!-- INJECT MODAL -->
     <div class="modal-backdrop" id="modal">
         <div class="modal-box" style="max-width:540px;">
             <div class="modal-title">⚡ Multi-TF Inject</div>
             <div class="modal-sub">Set all 6 timeframes for a coin in one shot.</div>
-
             <label class="field-label">Symbol</label>
             <input type="text" id="injSymbol" class="field-input" placeholder="e.g. BTCUSDT" style="text-transform:uppercase;">
-
             <div class="quick-fill-row">
                 <span style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:rgba(148,163,184,0.4);align-self:center;margin-right:4px;">QUICK FILL ALL:</span>
                 <button class="quick-btn quick-btn-bull" onclick="quickFillAll('BULLISH')">🐂 ALL BULLISH</button>
                 <button class="quick-btn quick-btn-bear" onclick="quickFillAll('BEARISH')">🐻 ALL BEARISH</button>
                 <button class="quick-btn quick-btn-none" onclick="quickFillAll('NONE')">— ALL NONE</button>
             </div>
-
             <div id="tfBlocks"></div>
-
             <div class="inject-progress" id="injProgress"></div>
-
             <div style="display:flex;gap:10px;margin-top:8px;">
                 <button onclick="closeModal()" class="btn-cancel">CANCEL</button>
                 <button onclick="doInject()" id="injBtn" class="btn-inject-modal">INJECT ALL ⚡</button>
@@ -667,16 +375,35 @@
         </div>
     </div>
 
+    <!-- DELETE MODAL -->
     <div class="modal-backdrop" id="deleteModal">
         <div class="modal-box delete-theme">
             <div class="modal-title" style="color:#fca5a5;">🗑️ Purge Target Data</div>
             <div class="modal-sub">Remove coins from the database.</div>
             <label class="field-label" style="color:rgba(239,68,68,0.6);">Symbol to Purge</label>
-            <input type="text" id="delSymbol" class="field-input delete-input" placeholder="e.g. BTCUSDT"
-                   style="text-transform:uppercase;border-color:rgba(239,68,68,0.25);">
+            <input type="text" id="delSymbol" class="field-input delete-input" placeholder="e.g. BTCUSDT" style="text-transform:uppercase;border-color:rgba(239,68,68,0.25);">
             <div style="display:flex;gap:10px;margin-top:8px;">
                 <button onclick="closeDeleteModal()" class="btn-cancel">CANCEL</button>
                 <button onclick="doDelete()" id="delBtn" class="btn-delete-modal">PURGE 🗑️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal-backdrop" id="settingsModal">
+        <div class="modal-box settings-theme" style="max-width:560px;">
+            <div class="modal-title" style="color:#34d399;">⚙️ Alignment Settings</div>
+            <div class="modal-sub">Select which alignment combos highlight cards and send Telegram alerts. Multiple can be active simultaneously.</div>
+            <div class="settings-select-row">
+                <button class="settings-select-btn settings-select-all" onclick="settingsSelectAll()">✅ Select All</button>
+                <button class="settings-select-btn settings-select-none" onclick="settingsSelectNone()">— Select None</button>
+                <span id="settingsCountLabel" style="font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:rgba(148,163,184,0.4);align-self:center;margin-left:auto;">0 selected</span>
+            </div>
+            <div id="settingsComboList"></div>
+            <div class="settings-status" id="settingsStatus"></div>
+            <div style="display:flex;gap:10px;margin-top:12px;">
+                <button onclick="closeSettingsModal()" class="btn-cancel">CANCEL</button>
+                <button onclick="saveSettings()" id="saveSettingsBtn" class="btn-save-settings">SAVE SETTINGS ⚙️</button>
             </div>
         </div>
     </div>
@@ -687,13 +414,28 @@
         // ══════════════════════════════════
         const ALL_TFS = ['1W', '1D', '4H', '1H', '30M', '15M'];
         const TF_LABELS = {
-            '1W':  '1W — WEEKLY',
-            '1D':  '1D — DAILY',
-            '4H':  '4H — 4 HOUR',
-            '1H':  '1H — 1 HOUR',
-            '30M': '30M — 30 MIN',
-            '15M': '15M — 15 MIN'
+            '1W':'1W — WEEKLY','1D':'1D — DAILY','4H':'4H — 4 HOUR',
+            '1H':'1H — 1 HOUR','30M':'30M — 30 MIN','15M':'15M — 15 MIN'
         };
+        const ALIGNMENT_COMBOS = [
+            { id:"W_D_4H",            label:"W+D+4H",             tfs:["1W","1D","4H"] },
+            { id:"W_D_4H_1H",         label:"W+D+4H+1H",          tfs:["1W","1D","4H","1H"] },
+            { id:"W_D_4H_1H_30M",     label:"W+D+4H+1H+30M",      tfs:["1W","1D","4H","1H","30M"] },
+            { id:"W_D_4H_1H_30M_15M", label:"W+D+4H+1H+30M+15M",  tfs:["1W","1D","4H","1H","30M","15M"] },
+            { id:"D_4H",              label:"D+4H",                tfs:["1D","4H"] },
+            { id:"D_4H_1H",           label:"D+4H+1H",             tfs:["1D","4H","1H"] },
+            { id:"D_4H_1H_30M",       label:"D+4H+1H+30M",         tfs:["1D","4H","1H","30M"] },
+            { id:"D_4H_1H_30M_15M",   label:"D+4H+1H+30M+15M",     tfs:["1D","4H","1H","30M","15M"] },
+            { id:"4H_1H",             label:"4H+1H",               tfs:["4H","1H"] },
+            { id:"4H_1H_30M",         label:"4H+1H+30M",           tfs:["4H","1H","30M"] },
+            { id:"4H_1H_30M_15M",     label:"4H+1H+30M+15M",       tfs:["4H","1H","30M","15M"] }
+        ];
+
+        // ══════════════════════════════════
+        // STATE
+        // ══════════════════════════════════
+        let activeAlignments = [];
+        let tempSelectedCombos = [];
 
         // ══════════════════════════════════
         // AUDIO
@@ -701,7 +443,6 @@
         const moneySound = new Audio('/money.mp3');
         moneySound.volume = 0.85;
         let audioOn = false;
-
         function toggleAudio() {
             audioOn = !audioOn;
             document.getElementById('audioIco').textContent = audioOn ? '🔊' : '🔇';
@@ -709,27 +450,10 @@
             document.getElementById('audioBtn').className = 'ctrl-btn btn-sound' + (audioOn ? ' on' : '');
             if (audioOn) { moneySound.currentTime=0; moneySound.play().catch(()=>{}); }
         }
-        function playEntrySound() {
-            if (!audioOn) return;
-            moneySound.currentTime=0; moneySound.play().catch(()=>{});
-        }
+        function playEntrySound() { if (!audioOn) return; moneySound.currentTime=0; moneySound.play().catch(()=>{}); }
 
         // ══════════════════════════════════
-        // COPY TO CLIPBOARD
-        // ══════════════════════════════════
-        window.copyValue = (val,e) => {
-            if (!val||val==='---'||val==='N/A') return;
-            navigator.clipboard.writeText(val);
-            const t=document.createElement('div');
-            t.textContent='📋 '+val; t.className='toast';
-            t.style.cssText=`position:fixed;z-index:999;pointer-events:none;left:${e.clientX+10}px;top:${e.clientY-30}px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;padding:5px 12px;border-radius:8px;background:rgba(16,185,129,0.92);color:white;border:1px solid rgba(52,211,153,0.6);box-shadow:0 0 20px rgba(16,185,129,0.4);transition:all 0.4s ease;`;
-            document.body.appendChild(t);
-            setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(-10px)';},700);
-            setTimeout(()=>t.remove(),1100);
-        };
-
-        // ══════════════════════════════════
-        // BUILD INJECT TF BLOCKS DYNAMICALLY
+        // INJECT MODAL
         // ══════════════════════════════════
         (function buildTfBlocks() {
             const container = document.getElementById('tfBlocks');
@@ -741,113 +465,116 @@
                         <option value="BULLISH">🟢 BULLISH</option>
                         <option value="BEARISH">🔴 BEARISH</option>
                     </select>
-                </div>
-            `).join('');
+                </div>`).join('');
         })();
 
-        // ══════════════════════════════════
-        // INJECT MODAL — MULTI-TF
-        // ══════════════════════════════════
         const openModal = () => { document.getElementById('modal').style.display='flex'; };
         const closeModal = () => {
             document.getElementById('modal').style.display='none';
             document.getElementById('injSymbol').value='';
-            ALL_TFS.forEach(tf => {
-                const el = document.getElementById('inj' + tf.replace('M','m') + 'State');
-                if (el) el.value = 'NONE';
-            });
-            const prog = document.getElementById('injProgress');
-            prog.innerHTML=''; prog.classList.remove('active');
+            ALL_TFS.forEach(tf => { const el = document.getElementById('inj'+tf.replace('M','m')+'State'); if(el) el.value='NONE'; });
+            const prog = document.getElementById('injProgress'); prog.innerHTML=''; prog.classList.remove('active');
         };
-        document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
-
-        function quickFillAll(state) {
-            ALL_TFS.forEach(tf => {
-                const el = document.getElementById('inj' + tf.replace('M','m') + 'State');
-                if (el) el.value = state;
-            });
-        }
+        document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+        function quickFillAll(state) { ALL_TFS.forEach(tf => { const el = document.getElementById('inj'+tf.replace('M','m')+'State'); if(el) el.value=state; }); }
 
         async function doInject() {
             const sym = document.getElementById('injSymbol').value.toUpperCase().trim();
             const btn = document.getElementById('injBtn');
             const prog = document.getElementById('injProgress');
-
             if (!sym) return alert('Please enter a symbol.');
-
-            const tfs = ALL_TFS.map(tf => ({
-                tf: tf,
-                state: document.getElementById('inj' + tf.replace('M','m') + 'State')?.value || 'NONE'
-            }));
-
-            const toSend = tfs.filter(t => t.state);
-            if (toSend.length === 0) return alert('Set at least one timeframe state.');
-
-            btn.textContent = 'INJECTING...';
-            btn.style.pointerEvents = 'none';
-            prog.innerHTML = '';
-            prog.classList.add('active');
-
-            let success = 0;
-            let fail = 0;
-
-            for (const t of toSend) {
-                const payload = { symbol: sym, tf: t.tf, state: t.state };
-
+            const tfs = ALL_TFS.map(tf => ({ tf, state: document.getElementById('inj'+tf.replace('M','m')+'State')?.value||'NONE' })).filter(t=>t.state);
+            if (!tfs.length) return alert('Set at least one timeframe state.');
+            btn.textContent='INJECTING...'; btn.style.pointerEvents='none'; prog.innerHTML=''; prog.classList.add('active');
+            let success=0, fail=0;
+            for (const t of tfs) {
                 try {
-                    const r = await fetch('/webhook', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (r.ok) {
-                        success++;
-                        prog.innerHTML += `<span class="done">✅ ${t.tf} → ${t.state}</span><br>`;
-                    } else {
-                        fail++;
-                        prog.innerHTML += `<span class="fail">❌ ${t.tf} failed (${r.status})</span><br>`;
-                    }
-                } catch (err) {
-                    fail++;
-                    prog.innerHTML += `<span class="fail">❌ ${t.tf} error</span><br>`;
-                }
-
-                await new Promise(r => setTimeout(r, 200));
+                    const r = await fetch('/webhook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:sym,tf:t.tf,state:t.state})});
+                    if(r.ok){success++;prog.innerHTML+=`<span class="done">✅ ${t.tf} → ${t.state}</span><br>`;}
+                    else{fail++;prog.innerHTML+=`<span class="fail">❌ ${t.tf} failed (${r.status})</span><br>`;}
+                } catch{fail++;prog.innerHTML+=`<span class="fail">❌ ${t.tf} error</span><br>`;}
+                await new Promise(r=>setTimeout(r,200));
             }
-
-            if (fail === 0) {
-                prog.innerHTML += `<br><span class="done">🎯 All ${success} timeframes injected for ${sym}!</span>`;
-                setTimeout(() => { closeModal(); }, 1200);
-            } else {
-                prog.innerHTML += `<br><span class="fail">⚠️ ${fail} failed, ${success} succeeded</span>`;
-            }
-
-            btn.textContent = 'INJECT ALL ⚡';
-            btn.style.pointerEvents = 'auto';
+            if(fail===0){prog.innerHTML+=`<br><span class="done">🎯 All ${success} timeframes injected for ${sym}!</span>`;setTimeout(()=>closeModal(),1200);}
+            else prog.innerHTML+=`<br><span class="fail">⚠️ ${fail} failed, ${success} succeeded</span>`;
+            btn.textContent='INJECT ALL ⚡'; btn.style.pointerEvents='auto';
         }
 
         // ══════════════════════════════════
         // DELETE MODAL
         // ══════════════════════════════════
-        const openDeleteModal=()=>{document.getElementById('deleteModal').style.display='flex';};
-        const closeDeleteModal=()=>{document.getElementById('deleteModal').style.display='none';document.getElementById('delSymbol').value='';};
-        document.getElementById('deleteModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDeleteModal();});
-
+        const openDeleteModal = () => { document.getElementById('deleteModal').style.display='flex'; };
+        const closeDeleteModal = () => { document.getElementById('deleteModal').style.display='none'; document.getElementById('delSymbol').value=''; };
+        document.getElementById('deleteModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeDeleteModal(); });
         async function doDelete() {
-            const sym=document.getElementById('delSymbol').value.toUpperCase().trim();
-            const btn=document.getElementById('delBtn');
+            const sym = document.getElementById('delSymbol').value.toUpperCase().trim();
+            const btn = document.getElementById('delBtn');
             if(!sym) return alert('Please enter a symbol to purge.');
             btn.textContent='PURGING...';
             try {
-                const r=await fetch('/api/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:sym,action:'DELETE'})});
+                const r = await fetch('/api/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:sym,action:'DELETE'})});
                 if(r.ok){closeDeleteModal();btn.textContent='PURGE 🗑️';}else throw new Error();
             } catch{alert('Purge Failed.');btn.textContent='PURGE 🗑️';}
         }
 
         // ══════════════════════════════════
+        // SETTINGS MODAL
+        // ══════════════════════════════════
+        function openSettingsModal() {
+            tempSelectedCombos = [...activeAlignments];
+            renderSettingsComboList();
+            document.getElementById('settingsStatus').textContent = '';
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+        function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
+        document.getElementById('settingsModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeSettingsModal(); });
+
+        function settingsSelectAll() { tempSelectedCombos = ALIGNMENT_COMBOS.map(c=>c.id); renderSettingsComboList(); }
+        function settingsSelectNone() { tempSelectedCombos = []; renderSettingsComboList(); }
+
+        function renderSettingsComboList() {
+            const container = document.getElementById('settingsComboList');
+            const countEl = document.getElementById('settingsCountLabel');
+            countEl.textContent = `${tempSelectedCombos.length} selected`;
+            container.innerHTML = ALIGNMENT_COMBOS.map(c => {
+                const isActive = tempSelectedCombos.includes(c.id);
+                return `<div class="settings-combo-item ${isActive?'active':''}" onclick="toggleSettingsCombo('${c.id}')">
+                    <div class="settings-combo-check">${isActive?'✓':''}</div>
+                    <div style="flex:1;">
+                        <div class="settings-combo-label">${c.label}</div>
+                        <div class="settings-combo-tfs">${c.tfs.join(' + ')}</div>
+                    </div>
+                    ${isActive ? '<span class="settings-active-badge">ACTIVE</span>' : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function toggleSettingsCombo(id) {
+            if(tempSelectedCombos.includes(id)) tempSelectedCombos = tempSelectedCombos.filter(c=>c!==id);
+            else tempSelectedCombos.push(id);
+            renderSettingsComboList();
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('saveSettingsBtn');
+            const status = document.getElementById('settingsStatus');
+            btn.textContent='SAVING...'; btn.style.pointerEvents='none';
+            try {
+                const r = await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({activeAlignments:tempSelectedCombos})});
+                if(r.ok) {
+                    const data = await r.json();
+                    activeAlignments = data.settings.activeAlignments;
+                    status.innerHTML = `<span style="color:#34d399;">✅ Saved! ${activeAlignments.length} combo(s) active</span>`;
+                    setTimeout(()=>closeSettingsModal(), 1000);
+                } else { status.innerHTML=`<span style="color:#f87171;">❌ Save failed</span>`; }
+            } catch { status.innerHTML=`<span style="color:#f87171;">❌ Error saving</span>`; }
+            btn.textContent='SAVE SETTINGS ⚙️'; btn.style.pointerEvents='auto';
+        }
+
+        // ══════════════════════════════════
         // ACTIVITY LOG
         // ══════════════════════════════════
-        let actLog=[];
+        let actLog = [];
         function fmtTime(ts) {
             if(!ts) return '';
             const d=new Date(ts);
@@ -865,10 +592,9 @@
         }
         function rebuildFeed() {
             const feed=document.getElementById('activityFeed');
-            const em=document.getElementById('emptyMsg');if(em) em.remove();
-            if(actLog.length===0){feed.innerHTML=`<p style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">No signals yet...</p>`;return;}
-            const sorted=[...actLog].sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
-            feed.innerHTML=sorted.map(buildLogCard).join('');
+            const em=document.getElementById('emptyMsg'); if(em) em.remove();
+            if(!actLog.length){feed.innerHTML=`<p style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">No signals yet...</p>`;return;}
+            feed.innerHTML=[...actLog].sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(buildLogCard).join('');
         }
         function mergeLog(sl) {
             if(!sl||!Array.isArray(sl)) return;
@@ -878,179 +604,145 @@
         }
 
         // ══════════════════════════════════
-                // ══════════════════════════════════
-        // RENDER
+        // CARD STATE ENGINE
         // ══════════════════════════════════
         function tfCls(s){return s==='BULLISH'?'tf-cell-bull':s==='BEARISH'?'tf-cell-bear':'tf-cell-none';}
         function tfEmo(s){return s==='BULLISH'?'🐂':s==='BEARISH'?'🐻':'—';}
 
-        function getCardState(tfs) {
-            const bullHas = (tf) => tfs[tf] === 'BULLISH';
-            const bearHas = (tf) => tfs[tf] === 'BEARISH';
+        function getMatchedCustomCombo(tfs) {
+            for (const comboId of activeAlignments) {
+                const combo = ALIGNMENT_COMBOS.find(c => c.id === comboId);
+                if (!combo) continue;
+                if (combo.tfs.every(tf => tfs[tf] === 'BULLISH')) return { combo, dir: 'BULLISH' };
+                if (combo.tfs.every(tf => tfs[tf] === 'BEARISH')) return { combo, dir: 'BEARISH' };
+            }
+            return null;
+        }
+
+        function getCardState(tfs, mState, pState, alignCnt) {
             const bullCount = ALL_TFS.filter(tf => tfs[tf] === 'BULLISH').length;
             const bearCount = ALL_TFS.filter(tf => tfs[tf] === 'BEARISH').length;
 
-            // 6/6 GOD
-            if (bullCount >= 6) return { type: 'GOD_BULL', dir: 'BULLISH' };
-            if (bearCount >= 6) return { type: 'GOD_BEAR', dir: 'BEARISH' };
+            // 1. 6/6 GOD (highest priority)
+            if (mState === 'BULLISH' || bullCount >= 6) return { type:'GOD', dir:'BULLISH', count:6 };
+            if (mState === 'BEARISH' || bearCount >= 6) return { type:'GOD', dir:'BEARISH', count:6 };
 
-            // 5/6 PARTIAL
-            if (bullCount >= 5) return { type: 'PARTIAL_BULL', dir: 'BULLISH' };
-            if (bearCount >= 5) return { type: 'PARTIAL_BEAR', dir: 'BEARISH' };
+            // 2. 5/6 PARTIAL
+            if (pState === 'BULLISH' || bullCount >= 5) return { type:'PARTIAL', dir:'BULLISH', count:Math.max(bullCount, alignCnt) };
+            if (pState === 'BEARISH' || bearCount >= 5) return { type:'PARTIAL', dir:'BEARISH', count:Math.max(bearCount, alignCnt) };
 
-            // W+D+4H + (1H or 30M or 15M)
-            const wdhBull = bullHas('1W') && bullHas('1D') && bullHas('4H');
-            const wdhBear = bearHas('1W') && bearHas('1D') && bearHas('4H');
-            if (wdhBull && (bullHas('1H') || bullHas('30M') || bullHas('15M')))
-                return { type: 'WDH_BULL', dir: 'BULLISH' };
-            if (wdhBear && (bearHas('1H') || bearHas('30M') || bearHas('15M')))
-                return { type: 'WDH_BEAR', dir: 'BEARISH' };
+            // 3. CUSTOM selected alignments
+            if (activeAlignments.length > 0) {
+                const customMatch = getMatchedCustomCombo(tfs);
+                if (customMatch) return { type:'CUSTOM', dir:customMatch.dir, combo:customMatch.combo };
+            }
 
-            // D+4H+1H+30M
-            if (bullHas('1D') && bullHas('4H') && bullHas('1H') && bullHas('30M'))
-                return { type: 'D4H_BULL', dir: 'BULLISH' };
-            if (bearHas('1D') && bearHas('4H') && bearHas('1H') && bearHas('30M'))
-                return { type: 'D4H_BEAR', dir: 'BEARISH' };
-
-            return { type: 'IDLE', dir: 'NONE' };
+            return { type:'IDLE', dir:'NONE', count:Math.max(bullCount,bearCount) };
         }
 
-        function getWDHExtraLabel(tfs, direction) {
-            if (tfs['1H']  === direction) return 'W+D+4H+1H';
-            if (tfs['30M'] === direction) return 'W+D+4H+30M';
-            if (tfs['15M'] === direction) return 'W+D+4H+15M';
-            return 'W+D+4H+?';
-        }
-
+        // ══════════════════════════════════
+        // RENDER
+        // ══════════════════════════════════
         function render(ms) {
             const grid = document.getElementById('coinGrid');
             grid.innerHTML = '';
 
             const syms = Object.keys(ms).sort((a, b) => {
                 const priority = (s) => {
-                    const cs = getCardState(ms[s].timeframes || {});
-                    if (cs.type === 'GOD_BULL'     || cs.type === 'GOD_BEAR')     return 6;
-                    if (cs.type === 'PARTIAL_BULL'  || cs.type === 'PARTIAL_BEAR') return 5;
-                    if (cs.type === 'WDH_BULL'      || cs.type === 'WDH_BEAR')     return 4;
-                    if (cs.type === 'D4H_BULL'      || cs.type === 'D4H_BEAR')     return 3;
+                    const cs = getCardState(ms[s].timeframes||{}, ms[s].lastAlertedState, ms[s].partialState||'NONE', ms[s].alignCount||0);
+                    if (cs.type==='GOD') return 6;
+                    if (cs.type==='PARTIAL') return 5;
+                    if (cs.type==='CUSTOM') return 4;
                     return 0;
                 };
-                const pa = priority(a), pb = priority(b);
-                if (pa !== pb) return pb - pa;
+                const pa=priority(a), pb=priority(b);
+                if(pa!==pb) return pb-pa;
                 return a.localeCompare(b);
             });
 
-            const total      = syms.length;
-            const godBulls   = syms.filter(s => getCardState(ms[s].timeframes||{}).type === 'GOD_BULL').length;
-            const godBears   = syms.filter(s => getCardState(ms[s].timeframes||{}).type === 'GOD_BEAR').length;
-            const partials   = syms.filter(s => { const t = getCardState(ms[s].timeframes||{}).type; return t==='PARTIAL_BULL'||t==='PARTIAL_BEAR'; }).length;
-            const wdhs       = syms.filter(s => { const t = getCardState(ms[s].timeframes||{}).type; return t==='WDH_BULL'||t==='WDH_BEAR'; }).length;
-            const d4hs       = syms.filter(s => { const t = getCardState(ms[s].timeframes||{}).type; return t==='D4H_BULL'||t==='D4H_BEAR'; }).length;
-            const colored    = godBulls + godBears + partials + wdhs + d4hs;
-            const idles      = total - colored;
+            const total = syms.length;
+            let godBulls=0, godBears=0, partials=0, customs=0;
+            syms.forEach(s => {
+                const cs = getCardState(ms[s].timeframes||{}, ms[s].lastAlertedState, ms[s].partialState||'NONE', ms[s].alignCount||0);
+                if(cs.type==='GOD'&&cs.dir==='BULLISH') godBulls++;
+                else if(cs.type==='GOD'&&cs.dir==='BEARISH') godBears++;
+                else if(cs.type==='PARTIAL') partials++;
+                else if(cs.type==='CUSTOM') customs++;
+            });
+            const colored = godBulls+godBears+partials+customs;
+            const idles = total-colored;
 
-            document.getElementById('godCounter').textContent    = `${colored}/${total}`;
-            document.getElementById('bullPill').textContent      = `🐂 ${godBulls} GOD BULL`;
-            document.getElementById('bearPill').textContent      = `🐻 ${godBears} GOD BEAR`;
-            document.getElementById('partialPill').textContent   = `⚡ ${partials} PARTIAL`;
-            document.getElementById('idlePill').textContent      = `⏳ ${idles} IDLE`;
-            document.getElementById('totalPill').textContent     = `📊 ${total} TRACKED`;
+            document.getElementById('godCounter').textContent  = `${colored}/${total}`;
+            document.getElementById('bullPill').textContent    = `🐂 ${godBulls} GOD BULL`;
+            document.getElementById('bearPill').textContent    = `🐻 ${godBears} GOD BEAR`;
+            document.getElementById('partialPill').textContent = `⚡ ${partials} PARTIAL`;
+            document.getElementById('customPill').textContent  = `⚙️ ${customs} CUSTOM`;
+            document.getElementById('idlePill').textContent    = `⏳ ${idles} IDLE`;
+            document.getElementById('totalPill').textContent   = `📊 ${total} TRACKED`;
 
-            if (!syms.length) {
-                grid.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(148,163,184,0.3);grid-column:1/-1;text-align:center;padding:40px 0;">Awaiting TradingView webhooks...</p>`;
+            if(!syms.length){
+                grid.innerHTML=`<p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(148,163,184,0.3);grid-column:1/-1;text-align:center;padding:40px 0;">Awaiting TradingView webhooks...</p>`;
                 return;
             }
 
             syms.forEach(sym => {
-                const d        = ms[sym];
-                const tfs      = d.timeframes || {};
-                const cs       = getCardState(tfs);
-                const mState   = d.lastAlertedState;
+                const d      = ms[sym];
+                const tfs    = d.timeframes || {};
+                const cs     = getCardState(tfs, d.lastAlertedState, d.partialState||'NONE', d.alignCount||0);
                 const alignCnt = d.alignCount || 0;
 
                 let startTxt = 'Waiting...';
-                if (mState !== 'NONE' && d.lastGodModeStartTime) {
+                if(d.lastAlertedState!=='NONE' && d.lastGodModeStartTime) {
                     const dt = new Date(d.lastGodModeStartTime);
-                    startTxt = dt.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' ' + dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+                    startTxt = dt.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
                 }
 
                 let cardCls, badge, alignBarCls, alignBarTxt;
 
-                switch (cs.type) {
-                    case 'GOD_BULL':
-                        cardCls     = 'card-bull';
-                        badge       = `<span class="card-badge-bull">GOD 🐂 6/6</span>`;
-                        alignBarCls = 'align-bar-god';
-                        alignBarTxt = `✅ GOD-MODE: BULLISH (6/6)`;
-                        break;
-                    case 'GOD_BEAR':
-                        cardCls     = 'card-bear';
-                        badge       = `<span class="card-badge-bear">GOD 🐻 6/6</span>`;
-                        alignBarCls = 'align-bar-god';
-                        alignBarTxt = `✅ GOD-MODE: BEARISH (6/6)`;
-                        break;
-                    case 'PARTIAL_BULL':
-                        cardCls     = 'card-partial-bull';
-                        badge       = `<span class="card-badge-partial-bull">⚡ 🐂 ${alignCnt}/6</span>`;
-                        alignBarCls = 'align-bar-partial-bull';
-                        alignBarTxt = `⚡ PARTIAL: BULLISH (${alignCnt}/6)`;
-                        break;
-                    case 'PARTIAL_BEAR':
-                        cardCls     = 'card-partial-bear';
-                        badge       = `<span class="card-badge-partial-bear">⚡ 🐻 ${alignCnt}/6</span>`;
-                        alignBarCls = 'align-bar-partial-bear';
-                        alignBarTxt = `⚡ PARTIAL: BEARISH (${alignCnt}/6)`;
-                        break;
-                    case 'WDH_BULL': {
-                        const lbl   = getWDHExtraLabel(tfs, 'BULLISH');
-                        cardCls     = 'card-wdh-bull';
-                        badge       = `<span class="card-badge-wdh-bull">🔱 🐂 ${lbl}</span>`;
-                        alignBarCls = 'align-bar-wdh-bull';
-                        alignBarTxt = `🔱 ${lbl} BULLISH`;
-                        break;
+                if(cs.type==='GOD') {
+                    if(cs.dir==='BULLISH') {
+                        cardCls='card-bull'; badge=`<span class="card-badge-bull">GOD 🐂 6/6</span>`;
+                        alignBarCls='align-bar-god'; alignBarTxt=`✅ GOD-MODE: BULLISH (6/6)`;
+                    } else {
+                        cardCls='card-bear'; badge=`<span class="card-badge-bear">GOD 🐻 6/6</span>`;
+                        alignBarCls='align-bar-god'; alignBarTxt=`✅ GOD-MODE: BEARISH (6/6)`;
                     }
-                    case 'WDH_BEAR': {
-                        const lbl   = getWDHExtraLabel(tfs, 'BEARISH');
-                        cardCls     = 'card-wdh-bear';
-                        badge       = `<span class="card-badge-wdh-bear">🔱 🐻 ${lbl}</span>`;
-                        alignBarCls = 'align-bar-wdh-bear';
-                        alignBarTxt = `🔱 ${lbl} BEARISH`;
-                        break;
+                } else if(cs.type==='PARTIAL') {
+                    if(cs.dir==='BULLISH') {
+                        cardCls='card-partial-bull'; badge=`<span class="card-badge-partial-bull">⚡ 🐂 ${cs.count}/6</span>`;
+                        alignBarCls='align-bar-partial-bull'; alignBarTxt=`⚡ PARTIAL: BULLISH (${cs.count}/6)`;
+                    } else {
+                        cardCls='card-partial-bear'; badge=`<span class="card-badge-partial-bear">⚡ 🐻 ${cs.count}/6</span>`;
+                        alignBarCls='align-bar-partial-bear'; alignBarTxt=`⚡ PARTIAL: BEARISH (${cs.count}/6)`;
                     }
-                    case 'D4H_BULL':
-                        cardCls     = 'card-d4h-bull';
-                        badge       = `<span class="card-badge-d4h-bull">⚔️ 🐂 D+4H+1H+30M</span>`;
-                        alignBarCls = 'align-bar-d4h-bull';
-                        alignBarTxt = `⚔️ D+4H+1H+30M BULLISH`;
-                        break;
-                    case 'D4H_BEAR':
-                        cardCls     = 'card-d4h-bear';
-                        badge       = `<span class="card-badge-d4h-bear">⚔️ 🐻 D+4H+1H+30M</span>`;
-                        alignBarCls = 'align-bar-d4h-bear';
-                        alignBarTxt = `⚔️ D+4H+1H+30M BEARISH`;
-                        break;
-                    default:
-                        cardCls     = 'card-idle';
-                        badge       = `<span class="card-badge-idle">${alignCnt}/6</span>`;
-                        alignBarCls = 'align-bar-none';
-                        alignBarTxt = `— ${alignCnt}/6 aligned`;
+                } else if(cs.type==='CUSTOM') {
+                    const lbl = cs.combo.label;
+                    if(cs.dir==='BULLISH') {
+                        cardCls='card-custom-bull'; badge=`<span class="card-badge-custom-bull">⚙️ 🐂 ${lbl}</span>`;
+                        alignBarCls='align-bar-custom-bull'; alignBarTxt=`⚙️ ${lbl} BULLISH`;
+                    } else {
+                        cardCls='card-custom-bear'; badge=`<span class="card-badge-custom-bear">⚙️ 🐻 ${lbl}</span>`;
+                        alignBarCls='align-bar-custom-bear'; alignBarTxt=`⚙️ ${lbl} BEARISH`;
+                    }
+                } else {
+                    cardCls='card-idle';
+                    badge=`<span class="card-badge-idle">${alignCnt}/6</span>`;
+                    alignBarCls='align-bar-none';
+                    alignBarTxt=`— ${alignCnt}/6 aligned`;
                 }
 
-                // Build 6 TF cells
-                let tfCells = '';
+                let tfCells='';
                 ALL_TFS.forEach(tf => {
-                    tfCells += `
-                        <div class="tf-cell ${tfCls(tfs[tf])}">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-                                <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
-                                <span style="font-size:0.65rem;">${tfEmo(tfs[tf])}</span>
-                            </div>
-                            <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${tfs[tf]||'NONE'}</div>
+                    tfCells += `<div class="tf-cell ${tfCls(tfs[tf])}">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                            <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
+                            <span style="font-size:0.65rem;">${tfEmo(tfs[tf])}</span>
                         </div>
-                    `;
+                        <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${tfs[tf]||'NONE'}</div>
+                    </div>`;
                 });
 
-                grid.insertAdjacentHTML('beforeend', `
+                grid.insertAdjacentHTML('beforeend',`
                     <div class="coin-card ${cardCls}">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                             <div>
@@ -1059,21 +751,20 @@
                             </div>
                             ${badge}
                         </div>
-                        <div class="tf-row">
-                            ${tfCells}
-                        </div>
+                        <div class="tf-row">${tfCells}</div>
                         <div class="align-bar ${alignBarCls}">${alignBarTxt}</div>
-                    </div>
-                `);
+                    </div>`);
             });
         }
+
         // ══════════════════════════════════
         // INIT + SSE
         // ══════════════════════════════════
         fetch('/api/state').then(r=>r.json()).then(data=>{
+            if(data.settings) activeAlignments = data.settings.activeAlignments || [];
             const ms=data.marketState||data;
             const log=data.activityLog||[];
-            mergeLog(log);if(actLog.length) rebuildFeed();
+            mergeLog(log); if(actLog.length) rebuildFeed();
             render(ms);
         });
 
@@ -1087,6 +778,7 @@
         es.onmessage=e=>{
             const data=JSON.parse(e.data);
             if(data.soundAlert){playEntrySound();return;}
+            if(data.settings) activeAlignments = data.settings.activeAlignments || [];
             const ms=data.marketState||data;
             const log=data.activityLog||[];
             if(log.length){mergeLog(log);rebuildFeed();}
