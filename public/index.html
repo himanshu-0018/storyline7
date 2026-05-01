@@ -254,6 +254,78 @@
             background:linear-gradient(90deg,transparent,#f87171,#fca5a5,#f87171,transparent);
             animation:shimmer 3s ease-in-out infinite;
         }
+        .card-wdh-bull {
+    background:linear-gradient(135deg,rgba(4,55,30,0.90) 0%,rgba(5,90,60,0.70) 50%,rgba(15,30,50,0.85) 100%);
+    border:1px solid rgba(52,211,153,0.5);
+    box-shadow:0 0 28px rgba(52,211,153,0.14),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(110,231,183,0.18);
+}
+.card-wdh-bull::after {
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,#34d399,#6ee7b7,#34d399,transparent);
+    animation:shimmer 3s ease-in-out infinite;
+}
+.card-wdh-bear {
+    background:linear-gradient(135deg,rgba(80,10,10,0.90) 0%,rgba(130,35,35,0.70) 50%,rgba(20,18,50,0.85) 100%);
+    border:1px solid rgba(252,165,165,0.5);
+    box-shadow:0 0 28px rgba(252,165,165,0.14),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(254,202,202,0.18);
+}
+.card-wdh-bear::after {
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,#fca5a5,#fecaca,#fca5a5,transparent);
+    animation:shimmer 3s ease-in-out infinite;
+}
+.card-d4h-bull {
+    background:linear-gradient(135deg,rgba(3,50,50,0.90) 0%,rgba(4,80,80,0.68) 50%,rgba(15,28,50,0.85) 100%);
+    border:1px solid rgba(34,211,238,0.45);
+    box-shadow:0 0 26px rgba(34,211,238,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(103,232,249,0.15);
+}
+.card-d4h-bull::after {
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,#22d3ee,#67e8f9,#22d3ee,transparent);
+    animation:shimmer 3s ease-in-out infinite;
+}
+.card-d4h-bear {
+    background:linear-gradient(135deg,rgba(60,10,60,0.90) 0%,rgba(100,20,100,0.68) 50%,rgba(20,15,50,0.85) 100%);
+    border:1px solid rgba(192,132,252,0.45);
+    box-shadow:0 0 26px rgba(192,132,252,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(216,180,254,0.15);
+}
+.card-d4h-bear::after {
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,#c084fc,#d8b4fe,#c084fc,transparent);
+    animation:shimmer 3s ease-in-out infinite;
+}
+
+/* New badges */
+.card-badge-wdh-bull {
+    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
+    padding:3px 8px;border-radius:6px;
+    background:linear-gradient(135deg,rgba(52,211,153,0.25),rgba(110,231,183,0.12));
+    border:1px solid rgba(110,231,183,0.45);color:#6ee7b7;
+}
+.card-badge-wdh-bear {
+    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
+    padding:3px 8px;border-radius:6px;
+    background:linear-gradient(135deg,rgba(252,165,165,0.25),rgba(254,202,202,0.12));
+    border:1px solid rgba(254,202,202,0.45);color:#fecaca;
+}
+.card-badge-d4h-bull {
+    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
+    padding:3px 8px;border-radius:6px;
+    background:linear-gradient(135deg,rgba(34,211,238,0.25),rgba(103,232,249,0.12));
+    border:1px solid rgba(103,232,249,0.45);color:#67e8f9;
+}
+.card-badge-d4h-bear {
+    font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;
+    padding:3px 8px;border-radius:6px;
+    background:linear-gradient(135deg,rgba(192,132,252,0.25),rgba(216,180,254,0.12));
+    border:1px solid rgba(216,180,254,0.45);color:#d8b4fe;
+}
+
+/* New align bars */
+.align-bar-wdh-bull { background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#6ee7b7; }
+.align-bar-wdh-bear { background:rgba(252,165,165,0.12);border:1px solid rgba(252,165,165,0.3);color:#fecaca; }
+.align-bar-d4h-bull { background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.3);color:#67e8f9; }
+.align-bar-d4h-bear { background:rgba(192,132,252,0.12);border:1px solid rgba(192,132,252,0.3);color:#d8b4fe; }
         @keyframes shimmer { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
 
         .card-symbol { font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:0.02em;line-height:1; }
@@ -806,86 +878,163 @@
         }
 
         // ══════════════════════════════════
+                // ══════════════════════════════════
         // RENDER
         // ══════════════════════════════════
         function tfCls(s){return s==='BULLISH'?'tf-cell-bull':s==='BEARISH'?'tf-cell-bear':'tf-cell-none';}
         function tfEmo(s){return s==='BULLISH'?'🐂':s==='BEARISH'?'🐻':'—';}
 
-        function render(ms) {
-            const grid=document.getElementById('coinGrid');
-            grid.innerHTML='';
+        function getCardState(tfs) {
+            const bullHas = (tf) => tfs[tf] === 'BULLISH';
+            const bearHas = (tf) => tfs[tf] === 'BEARISH';
+            const bullCount = ALL_TFS.filter(tf => tfs[tf] === 'BULLISH').length;
+            const bearCount = ALL_TFS.filter(tf => tfs[tf] === 'BEARISH').length;
 
-            const syms=Object.keys(ms).sort((a,b)=>{
-                const sa=ms[a].lastAlertedState!=='NONE'?3:((ms[a].partialState||'NONE')!=='NONE'?2:((ms[a].alignCount||0)>=1?1:0));
-                const sb=ms[b].lastAlertedState!=='NONE'?3:((ms[b].partialState||'NONE')!=='NONE'?2:((ms[b].alignCount||0)>=1?1:0));
-                if(sa!==sb) return sb-sa;
+            // 6/6 GOD
+            if (bullCount >= 6) return { type: 'GOD_BULL', dir: 'BULLISH' };
+            if (bearCount >= 6) return { type: 'GOD_BEAR', dir: 'BEARISH' };
+
+            // 5/6 PARTIAL
+            if (bullCount >= 5) return { type: 'PARTIAL_BULL', dir: 'BULLISH' };
+            if (bearCount >= 5) return { type: 'PARTIAL_BEAR', dir: 'BEARISH' };
+
+            // W+D+4H + (1H or 30M or 15M)
+            const wdhBull = bullHas('1W') && bullHas('1D') && bullHas('4H');
+            const wdhBear = bearHas('1W') && bearHas('1D') && bearHas('4H');
+            if (wdhBull && (bullHas('1H') || bullHas('30M') || bullHas('15M')))
+                return { type: 'WDH_BULL', dir: 'BULLISH' };
+            if (wdhBear && (bearHas('1H') || bearHas('30M') || bearHas('15M')))
+                return { type: 'WDH_BEAR', dir: 'BEARISH' };
+
+            // D+4H+1H+30M
+            if (bullHas('1D') && bullHas('4H') && bullHas('1H') && bullHas('30M'))
+                return { type: 'D4H_BULL', dir: 'BULLISH' };
+            if (bearHas('1D') && bearHas('4H') && bearHas('1H') && bearHas('30M'))
+                return { type: 'D4H_BEAR', dir: 'BEARISH' };
+
+            return { type: 'IDLE', dir: 'NONE' };
+        }
+
+        function getWDHExtraLabel(tfs, direction) {
+            if (tfs['1H']  === direction) return 'W+D+4H+1H';
+            if (tfs['30M'] === direction) return 'W+D+4H+30M';
+            if (tfs['15M'] === direction) return 'W+D+4H+15M';
+            return 'W+D+4H+?';
+        }
+
+        function render(ms) {
+            const grid = document.getElementById('coinGrid');
+            grid.innerHTML = '';
+
+            const syms = Object.keys(ms).sort((a, b) => {
+                const priority = (s) => {
+                    const cs = getCardState(ms[s].timeframes || {});
+                    if (cs.type === 'GOD_BULL'     || cs.type === 'GOD_BEAR')     return 6;
+                    if (cs.type === 'PARTIAL_BULL'  || cs.type === 'PARTIAL_BEAR') return 5;
+                    if (cs.type === 'WDH_BULL'      || cs.type === 'WDH_BEAR')     return 4;
+                    if (cs.type === 'D4H_BULL'      || cs.type === 'D4H_BEAR')     return 3;
+                    return 0;
+                };
+                const pa = priority(a), pb = priority(b);
+                if (pa !== pb) return pb - pa;
                 return a.localeCompare(b);
             });
 
-            const total=syms.length;
-            const gods=syms.filter(s=>ms[s].lastAlertedState!=='NONE');
-            const godBulls=gods.filter(s=>ms[s].lastAlertedState==='BULLISH').length;
-            const godBears=gods.filter(s=>ms[s].lastAlertedState==='BEARISH').length;
-            const partials=syms.filter(s=>ms[s].lastAlertedState==='NONE'&&(ms[s].partialState||'NONE')!=='NONE').length;
-            const idles=total-gods.length-partials;
+            const total      = syms.length;
+            const godBulls   = syms.filter(s => getCardState(ms[s].timeframes||{}).type === 'GOD_BULL').length;
+            const godBears   = syms.filter(s => getCardState(ms[s].timeframes||{}).type === 'GOD_BEAR').length;
+            const partials   = syms.filter(s => { const t = getCardState(ms[s].timeframes||{}).type; return t==='PARTIAL_BULL'||t==='PARTIAL_BEAR'; }).length;
+            const wdhs       = syms.filter(s => { const t = getCardState(ms[s].timeframes||{}).type; return t==='WDH_BULL'||t==='WDH_BEAR'; }).length;
+            const d4hs       = syms.filter(s => { const t = getCardState(ms[s].timeframes||{}).type; return t==='D4H_BULL'||t==='D4H_BEAR'; }).length;
+            const colored    = godBulls + godBears + partials + wdhs + d4hs;
+            const idles      = total - colored;
 
-            document.getElementById('godCounter').textContent=`${gods.length}/${total}`;
-            document.getElementById('bullPill').textContent=`🐂 ${godBulls} GOD BULL`;
-            document.getElementById('bearPill').textContent=`🐻 ${godBears} GOD BEAR`;
-            document.getElementById('partialPill').textContent=`⚡ ${partials} PARTIAL`;
-            document.getElementById('idlePill').textContent=`⏳ ${idles} IDLE`;
-            document.getElementById('totalPill').textContent=`📊 ${total} TRACKED`;
+            document.getElementById('godCounter').textContent    = `${colored}/${total}`;
+            document.getElementById('bullPill').textContent      = `🐂 ${godBulls} GOD BULL`;
+            document.getElementById('bearPill').textContent      = `🐻 ${godBears} GOD BEAR`;
+            document.getElementById('partialPill').textContent   = `⚡ ${partials} PARTIAL`;
+            document.getElementById('idlePill').textContent      = `⏳ ${idles} IDLE`;
+            document.getElementById('totalPill').textContent     = `📊 ${total} TRACKED`;
 
-            if(!syms.length){
-                grid.innerHTML=`<p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(148,163,184,0.3);grid-column:1/-1;text-align:center;padding:40px 0;">Awaiting TradingView webhooks...</p>`;
+            if (!syms.length) {
+                grid.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(148,163,184,0.3);grid-column:1/-1;text-align:center;padding:40px 0;">Awaiting TradingView webhooks...</p>`;
                 return;
             }
 
-            syms.forEach(sym=>{
-                const d=ms[sym];
-                const tfs=d.timeframes||{};
-                const mState=d.lastAlertedState;
-                const pState=d.partialState||'NONE';
-                const alignCnt=d.alignCount||0;
+            syms.forEach(sym => {
+                const d        = ms[sym];
+                const tfs      = d.timeframes || {};
+                const cs       = getCardState(tfs);
+                const mState   = d.lastAlertedState;
+                const alignCnt = d.alignCount || 0;
 
-                let startTxt='Waiting...';
-                if(mState!=='NONE'&&d.lastGodModeStartTime){
-                    const dt=new Date(d.lastGodModeStartTime);
-                    startTxt=dt.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+                let startTxt = 'Waiting...';
+                if (mState !== 'NONE' && d.lastGodModeStartTime) {
+                    const dt = new Date(d.lastGodModeStartTime);
+                    startTxt = dt.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' ' + dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
                 }
 
-              let cardCls,badge;
-if (mState === 'BULLISH') {
-    cardCls = 'card-bull';
-    badge = `<span class="card-badge-bull">GOD 🐂 6/6</span>`;
-} else if (mState === 'BEARISH') {
-    cardCls = 'card-bear';
-    badge = `<span class="card-badge-bear">GOD 🐻 6/6</span>`;
-} else if (pState === 'BULLISH') {
-    cardCls = 'card-partial-bull';
-    badge = `<span class="card-badge-partial-bull">⚡ 🐂 ${alignCnt}/6</span>`;
-} else if (pState === 'BEARISH') {
-    cardCls = 'card-partial-bear';
-    badge = `<span class="card-badge-partial-bear">⚡ 🐻 ${alignCnt}/6</span>`;
-} else {
-    cardCls = 'card-idle';
-    badge = `<span class="card-badge-idle">${alignCnt}/6</span>`;
-}
+                let cardCls, badge, alignBarCls, alignBarTxt;
 
-let alignBarCls,alignBarTxt;
-if (mState !== 'NONE') {
-    alignBarCls = 'align-bar-god';
-    alignBarTxt = `✅ GOD-MODE: ${mState} (6/6)`;
-} else if (pState === 'BULLISH') {
-    alignBarCls = 'align-bar-partial-bull';
-    alignBarTxt = `⚡ PARTIAL: BULLISH (${alignCnt}/6)`;
-} else if (pState === 'BEARISH') {
-    alignBarCls = 'align-bar-partial-bear';
-    alignBarTxt = `⚡ PARTIAL: BEARISH (${alignCnt}/6)`;
-} else {
-    alignBarCls = 'align-bar-none';
-    alignBarTxt = `— ${alignCnt}/6 aligned`;
-}
+                switch (cs.type) {
+                    case 'GOD_BULL':
+                        cardCls     = 'card-bull';
+                        badge       = `<span class="card-badge-bull">GOD 🐂 6/6</span>`;
+                        alignBarCls = 'align-bar-god';
+                        alignBarTxt = `✅ GOD-MODE: BULLISH (6/6)`;
+                        break;
+                    case 'GOD_BEAR':
+                        cardCls     = 'card-bear';
+                        badge       = `<span class="card-badge-bear">GOD 🐻 6/6</span>`;
+                        alignBarCls = 'align-bar-god';
+                        alignBarTxt = `✅ GOD-MODE: BEARISH (6/6)`;
+                        break;
+                    case 'PARTIAL_BULL':
+                        cardCls     = 'card-partial-bull';
+                        badge       = `<span class="card-badge-partial-bull">⚡ 🐂 ${alignCnt}/6</span>`;
+                        alignBarCls = 'align-bar-partial-bull';
+                        alignBarTxt = `⚡ PARTIAL: BULLISH (${alignCnt}/6)`;
+                        break;
+                    case 'PARTIAL_BEAR':
+                        cardCls     = 'card-partial-bear';
+                        badge       = `<span class="card-badge-partial-bear">⚡ 🐻 ${alignCnt}/6</span>`;
+                        alignBarCls = 'align-bar-partial-bear';
+                        alignBarTxt = `⚡ PARTIAL: BEARISH (${alignCnt}/6)`;
+                        break;
+                    case 'WDH_BULL': {
+                        const lbl   = getWDHExtraLabel(tfs, 'BULLISH');
+                        cardCls     = 'card-wdh-bull';
+                        badge       = `<span class="card-badge-wdh-bull">🔱 🐂 ${lbl}</span>`;
+                        alignBarCls = 'align-bar-wdh-bull';
+                        alignBarTxt = `🔱 ${lbl} BULLISH`;
+                        break;
+                    }
+                    case 'WDH_BEAR': {
+                        const lbl   = getWDHExtraLabel(tfs, 'BEARISH');
+                        cardCls     = 'card-wdh-bear';
+                        badge       = `<span class="card-badge-wdh-bear">🔱 🐻 ${lbl}</span>`;
+                        alignBarCls = 'align-bar-wdh-bear';
+                        alignBarTxt = `🔱 ${lbl} BEARISH`;
+                        break;
+                    }
+                    case 'D4H_BULL':
+                        cardCls     = 'card-d4h-bull';
+                        badge       = `<span class="card-badge-d4h-bull">⚔️ 🐂 D+4H+1H+30M</span>`;
+                        alignBarCls = 'align-bar-d4h-bull';
+                        alignBarTxt = `⚔️ D+4H+1H+30M BULLISH`;
+                        break;
+                    case 'D4H_BEAR':
+                        cardCls     = 'card-d4h-bear';
+                        badge       = `<span class="card-badge-d4h-bear">⚔️ 🐻 D+4H+1H+30M</span>`;
+                        alignBarCls = 'align-bar-d4h-bear';
+                        alignBarTxt = `⚔️ D+4H+1H+30M BEARISH`;
+                        break;
+                    default:
+                        cardCls     = 'card-idle';
+                        badge       = `<span class="card-badge-idle">${alignCnt}/6</span>`;
+                        alignBarCls = 'align-bar-none';
+                        alignBarTxt = `— ${alignCnt}/6 aligned`;
+                }
 
                 // Build 6 TF cells
                 let tfCells = '';
@@ -901,7 +1050,7 @@ if (mState !== 'NONE') {
                     `;
                 });
 
-                grid.insertAdjacentHTML('beforeend',`
+                grid.insertAdjacentHTML('beforeend', `
                     <div class="coin-card ${cardCls}">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                             <div>
@@ -918,7 +1067,6 @@ if (mState !== 'NONE') {
                 `);
             });
         }
-
         // ══════════════════════════════════
         // INIT + SSE
         // ══════════════════════════════════
