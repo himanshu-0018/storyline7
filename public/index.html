@@ -609,153 +609,138 @@
         function tfCls(s){return s==='BULLISH'?'tf-cell-bull':s==='BEARISH'?'tf-cell-bear':'tf-cell-none';}
         function tfEmo(s){return s==='BULLISH'?'🐂':s==='BEARISH'?'🐻':'—';}
 
-        function getMatchedCustomCombo(tfs) {
-            for (const comboId of activeAlignments) {
-                const combo = ALIGNMENT_COMBOS.find(c => c.id === comboId);
-                if (!combo) continue;
-                if (combo.tfs.every(tf => tfs[tf] === 'BULLISH')) return { combo, dir: 'BULLISH' };
-                if (combo.tfs.every(tf => tfs[tf] === 'BEARISH')) return { combo, dir: 'BEARISH' };
-            }
-            return null;
-        }
+function getMatchedCustomCombo(tfs) {
+    // Returns the FIRST matching active combo or null
+    for (const comboId of activeAlignments) {
+        const combo = ALIGNMENT_COMBOS.find(c => c.id === comboId);
+        if (!combo) continue;
+        if (combo.tfs.every(tf => tfs[tf] === 'BULLISH')) return { combo, dir: 'BULLISH' };
+        if (combo.tfs.every(tf => tfs[tf] === 'BEARISH')) return { combo, dir: 'BEARISH' };
+    }
+    return null;
+}
 
-        function getCardState(tfs, mState, pState, alignCnt) {
-            const bullCount = ALL_TFS.filter(tf => tfs[tf] === 'BULLISH').length;
-            const bearCount = ALL_TFS.filter(tf => tfs[tf] === 'BEARISH').length;
+function getCardState(tfs) {
+    // ONLY use custom selected alignments — no automatic 5/6, 6/6, WDH, D4H rules
+    const bullCount = ALL_TFS.filter(tf => tfs[tf] === 'BULLISH').length;
+    const bearCount = ALL_TFS.filter(tf => tfs[tf] === 'BEARISH').length;
+    const alignCnt  = Math.max(bullCount, bearCount);
 
-            // 1. 6/6 GOD (highest priority)
-            if (mState === 'BULLISH' || bullCount >= 6) return { type:'GOD', dir:'BULLISH', count:6 };
-            if (mState === 'BEARISH' || bearCount >= 6) return { type:'GOD', dir:'BEARISH', count:6 };
+    if (activeAlignments.length > 0) {
+        const customMatch = getMatchedCustomCombo(tfs);
+        if (customMatch) return {
+            type:  'CUSTOM',
+            dir:   customMatch.dir,
+            combo: customMatch.combo,
+            count: alignCnt
+        };
+    }
 
-            // 2. 5/6 PARTIAL
-            if (pState === 'BULLISH' || bullCount >= 5) return { type:'PARTIAL', dir:'BULLISH', count:Math.max(bullCount, alignCnt) };
-            if (pState === 'BEARISH' || bearCount >= 5) return { type:'PARTIAL', dir:'BEARISH', count:Math.max(bearCount, alignCnt) };
-
-            // 3. CUSTOM selected alignments
-            if (activeAlignments.length > 0) {
-                const customMatch = getMatchedCustomCombo(tfs);
-                if (customMatch) return { type:'CUSTOM', dir:customMatch.dir, combo:customMatch.combo };
-            }
-
-            return { type:'IDLE', dir:'NONE', count:Math.max(bullCount,bearCount) };
-        }
+    return { type: 'IDLE', dir: 'NONE', count: alignCnt };
+}
 
         // ══════════════════════════════════
         // RENDER
         // ══════════════════════════════════
-        function render(ms) {
-            const grid = document.getElementById('coinGrid');
-            grid.innerHTML = '';
+function render(ms) {
+    const grid = document.getElementById('coinGrid');
+    grid.innerHTML = '';
 
-            const syms = Object.keys(ms).sort((a, b) => {
-                const priority = (s) => {
-                    const cs = getCardState(ms[s].timeframes||{}, ms[s].lastAlertedState, ms[s].partialState||'NONE', ms[s].alignCount||0);
-                    if (cs.type==='GOD') return 6;
-                    if (cs.type==='PARTIAL') return 5;
-                    if (cs.type==='CUSTOM') return 4;
-                    return 0;
-                };
-                const pa=priority(a), pb=priority(b);
-                if(pa!==pb) return pb-pa;
-                return a.localeCompare(b);
-            });
+    const syms = Object.keys(ms).sort((a, b) => {
+        const priority = (s) => {
+            const cs = getCardState(ms[s].timeframes || {});
+            if (cs.type === 'CUSTOM' && cs.dir === 'BULLISH') return 2;
+            if (cs.type === 'CUSTOM' && cs.dir === 'BEARISH') return 1;
+            return 0;
+        };
+        const pa = priority(a), pb = priority(b);
+        if (pa !== pb) return pb - pa;
+        return a.localeCompare(b);
+    });
 
-            const total = syms.length;
-            let godBulls=0, godBears=0, partials=0, customs=0;
-            syms.forEach(s => {
-                const cs = getCardState(ms[s].timeframes||{}, ms[s].lastAlertedState, ms[s].partialState||'NONE', ms[s].alignCount||0);
-                if(cs.type==='GOD'&&cs.dir==='BULLISH') godBulls++;
-                else if(cs.type==='GOD'&&cs.dir==='BEARISH') godBears++;
-                else if(cs.type==='PARTIAL') partials++;
-                else if(cs.type==='CUSTOM') customs++;
-            });
-            const colored = godBulls+godBears+partials+customs;
-            const idles = total-colored;
+    const total = syms.length;
+    let customBulls = 0, customBears = 0, idles = 0;
 
-            document.getElementById('godCounter').textContent  = `${colored}/${total}`;
-            document.getElementById('bullPill').textContent    = `🐂 ${godBulls} GOD BULL`;
-            document.getElementById('bearPill').textContent    = `🐻 ${godBears} GOD BEAR`;
-            document.getElementById('partialPill').textContent = `⚡ ${partials} PARTIAL`;
-            document.getElementById('customPill').textContent  = `⚙️ ${customs} CUSTOM`;
-            document.getElementById('idlePill').textContent    = `⏳ ${idles} IDLE`;
-            document.getElementById('totalPill').textContent   = `📊 ${total} TRACKED`;
+    syms.forEach(s => {
+        const cs = getCardState(ms[s].timeframes || {});
+        if (cs.type === 'CUSTOM' && cs.dir === 'BULLISH') customBulls++;
+        else if (cs.type === 'CUSTOM' && cs.dir === 'BEARISH') customBears++;
+        else idles++;
+    });
 
-            if(!syms.length){
-                grid.innerHTML=`<p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(148,163,184,0.3);grid-column:1/-1;text-align:center;padding:40px 0;">Awaiting TradingView webhooks...</p>`;
-                return;
-            }
+    const colored = customBulls + customBears;
 
-            syms.forEach(sym => {
-                const d      = ms[sym];
-                const tfs    = d.timeframes || {};
-                const cs     = getCardState(tfs, d.lastAlertedState, d.partialState||'NONE', d.alignCount||0);
-                const alignCnt = d.alignCount || 0;
+    document.getElementById('godCounter').textContent  = `${colored}/${total}`;
+    document.getElementById('bullPill').textContent    = `🐂 ${customBulls} BULL`;
+    document.getElementById('bearPill').textContent    = `🐻 ${customBears} BEAR`;
+    document.getElementById('partialPill').textContent = `⚡ 0`;
+    document.getElementById('customPill').textContent  = `⚙️ ${colored} ALIGNED`;
+    document.getElementById('idlePill').textContent    = `⏳ ${idles} IDLE`;
+    document.getElementById('totalPill').textContent   = `📊 ${total} TRACKED`;
 
-                let startTxt = 'Waiting...';
-                if(d.lastAlertedState!=='NONE' && d.lastGodModeStartTime) {
-                    const dt = new Date(d.lastGodModeStartTime);
-                    startTxt = dt.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-                }
+    if (!syms.length) {
+        grid.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:rgba(148,163,184,0.3);grid-column:1/-1;text-align:center;padding:40px 0;">Awaiting TradingView webhooks...</p>`;
+        return;
+    }
 
-                let cardCls, badge, alignBarCls, alignBarTxt;
+    syms.forEach(sym => {
+        const d      = ms[sym];
+        const tfs    = d.timeframes || {};
+        const cs     = getCardState(tfs);
 
-                if(cs.type==='GOD') {
-                    if(cs.dir==='BULLISH') {
-                        cardCls='card-bull'; badge=`<span class="card-badge-bull">GOD 🐂 6/6</span>`;
-                        alignBarCls='align-bar-god'; alignBarTxt=`✅ GOD-MODE: BULLISH (6/6)`;
-                    } else {
-                        cardCls='card-bear'; badge=`<span class="card-badge-bear">GOD 🐻 6/6</span>`;
-                        alignBarCls='align-bar-god'; alignBarTxt=`✅ GOD-MODE: BEARISH (6/6)`;
-                    }
-                } else if(cs.type==='PARTIAL') {
-                    if(cs.dir==='BULLISH') {
-                        cardCls='card-partial-bull'; badge=`<span class="card-badge-partial-bull">⚡ 🐂 ${cs.count}/6</span>`;
-                        alignBarCls='align-bar-partial-bull'; alignBarTxt=`⚡ PARTIAL: BULLISH (${cs.count}/6)`;
-                    } else {
-                        cardCls='card-partial-bear'; badge=`<span class="card-badge-partial-bear">⚡ 🐻 ${cs.count}/6</span>`;
-                        alignBarCls='align-bar-partial-bear'; alignBarTxt=`⚡ PARTIAL: BEARISH (${cs.count}/6)`;
-                    }
-                } else if(cs.type==='CUSTOM') {
-                    const lbl = cs.combo.label;
-                    if(cs.dir==='BULLISH') {
-                        cardCls='card-custom-bull'; badge=`<span class="card-badge-custom-bull">⚙️ 🐂 ${lbl}</span>`;
-                        alignBarCls='align-bar-custom-bull'; alignBarTxt=`⚙️ ${lbl} BULLISH`;
-                    } else {
-                        cardCls='card-custom-bear'; badge=`<span class="card-badge-custom-bear">⚙️ 🐻 ${lbl}</span>`;
-                        alignBarCls='align-bar-custom-bear'; alignBarTxt=`⚙️ ${lbl} BEARISH`;
-                    }
-                } else {
-                    cardCls='card-idle';
-                    badge=`<span class="card-badge-idle">${alignCnt}/6</span>`;
-                    alignBarCls='align-bar-none';
-                    alignBarTxt=`— ${alignCnt}/6 aligned`;
-                }
-
-                let tfCells='';
-                ALL_TFS.forEach(tf => {
-                    tfCells += `<div class="tf-cell ${tfCls(tfs[tf])}">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-                            <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
-                            <span style="font-size:0.65rem;">${tfEmo(tfs[tf])}</span>
-                        </div>
-                        <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${tfs[tf]||'NONE'}</div>
-                    </div>`;
-                });
-
-                grid.insertAdjacentHTML('beforeend',`
-                    <div class="coin-card ${cardCls}">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-                            <div>
-                                <div class="card-symbol">${sym}</div>
-                                <div class="card-time">⏰ ${startTxt}</div>
-                            </div>
-                            ${badge}
-                        </div>
-                        <div class="tf-row">${tfCells}</div>
-                        <div class="align-bar ${alignBarCls}">${alignBarTxt}</div>
-                    </div>`);
-            });
+        let startTxt = 'Waiting...';
+        if (d.lastAlertedState !== 'NONE' && d.lastGodModeStartTime) {
+            const dt = new Date(d.lastGodModeStartTime);
+            startTxt = dt.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' ' + dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
         }
+
+        let cardCls, badge, alignBarCls, alignBarTxt;
+
+        if (cs.type === 'CUSTOM') {
+            const lbl = cs.combo.label;
+            if (cs.dir === 'BULLISH') {
+                cardCls     = 'card-custom-bull';
+                badge       = `<span class="card-badge-custom-bull">⚙️ 🐂 ${lbl}</span>`;
+                alignBarCls = 'align-bar-custom-bull';
+                alignBarTxt = `⚙️ ${lbl} BULLISH`;
+            } else {
+                cardCls     = 'card-custom-bear';
+                badge       = `<span class="card-badge-custom-bear">⚙️ 🐻 ${lbl}</span>`;
+                alignBarCls = 'align-bar-custom-bear';
+                alignBarTxt = `⚙️ ${lbl} BEARISH`;
+            }
+        } else {
+            cardCls     = 'card-idle';
+            badge       = `<span class="card-badge-idle">${cs.count}/6</span>`;
+            alignBarCls = 'align-bar-none';
+            alignBarTxt = `— ${cs.count}/6 aligned`;
+        }
+
+        let tfCells = '';
+        ALL_TFS.forEach(tf => {
+            tfCells += `<div class="tf-cell ${tfCls(tfs[tf])}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                    <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
+                    <span style="font-size:0.65rem;">${tfEmo(tfs[tf])}</span>
+                </div>
+                <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${tfs[tf]||'NONE'}</div>
+            </div>`;
+        });
+
+        grid.insertAdjacentHTML('beforeend', `
+            <div class="coin-card ${cardCls}">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                    <div>
+                        <div class="card-symbol">${sym}</div>
+                        <div class="card-time">⏰ ${startTxt}</div>
+                    </div>
+                    ${badge}
+                </div>
+                <div class="tf-row">${tfCells}</div>
+                <div class="align-bar ${alignBarCls}">${alignBarTxt}</div>
+            </div>`);
+    });
+}
 
         // ══════════════════════════════════
         // INIT + SSE
