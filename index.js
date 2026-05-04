@@ -28,6 +28,7 @@ const REDIS_STATE_KEY     = process.env.REDIS_KEY || 'godModeState_v4';
 const REDIS_LOG_KEY       = REDIS_STATE_KEY + '_activityLog';
 const REDIS_STATS_KEY     = REDIS_STATE_KEY + '_tradeStats';
 const REDIS_SETTINGS_KEY  = REDIS_STATE_KEY + '_settings';
+const REDIS_CRT_KEY       = REDIS_STATE_KEY + '_crt';
 
 const ZONE_TIMEFRAMES     = ["1W", "1D", "4H", "1H", "30M", "15M"];
 const GOD_THRESHOLD       = 6;
@@ -58,8 +59,11 @@ let marketState  = {};
 let activityLog  = [];
 let tradeStats   = {};
 let appSettings  = { activeAlignments: [] };
+let crtState     = {};
+let crtLog       = [];
 let clients      = [];
 let statsClients = [];
+let crtClients   = [];
 
 // ══════════════════════════════════════════════
 // BROADCAST
@@ -77,6 +81,16 @@ function broadcastSoundAlert(symbol, direction) {
 function broadcastStats() {
     const data = JSON.stringify({ tradeStats: buildEnrichedStats() });
     statsClients.forEach(c => c.res.write(`data: ${data}\n\n`));
+}
+
+function broadcastCRT() {
+    const data = JSON.stringify({ crtState, crtLog });
+    crtClients.forEach(c => c.res.write(`data: ${data}\n\n`));
+}
+
+function broadcastCRTSound(symbol, side) {
+    const data = JSON.stringify({ crtSound: true, symbol, side });
+    crtClients.forEach(c => c.res.write(`data: ${data}\n\n`));
 }
 
 // ══════════════════════════════════════════════
@@ -123,6 +137,20 @@ async function pushLogEvent(symbol, type, message, extra = {}, timestamp = null)
     activityLog.unshift({ symbol, type, message, timestamp: ts, ...extra });
     if (activityLog.length > 200) activityLog = activityLog.slice(0, 200);
     await redisClient.set(REDIS_LOG_KEY, JSON.stringify(activityLog));
+}
+
+// ══════════════════════════════════════════════
+// CRT LOG
+// ══════════════════════════════════════════════
+async function pushCRTLog(symbol, side, message, extra = {}) {
+    const ts = Date.now();
+    const isDup = crtLog.some(e =>
+        e.symbol === symbol && e.message === message && Math.abs((e.timestamp||0) - ts) < 5000
+    );
+    if (isDup) return;
+    crtLog.unshift({ symbol, side, message, timestamp: ts, ...extra });
+    if (crtLog.length > 200) crtLog = crtLog.slice(0, 200);
+    await redisClient.set(REDIS_CRT_KEY + '_log', JSON.stringify(crtLog));
 }
 
 // ══════════════════════════════════════════════
@@ -361,11 +389,26 @@ if (savedSettings) {
     console.log('⚙️ No saved settings, using defaults');
 }
 
+const savedCRT = await redisClient.get(REDIS_CRT_KEY);
+if (savedCRT) {
+    crtState = JSON.parse(savedCRT);
+    console.log(`🔄 CRT state loaded: ${Object.keys(crtState).length} symbols`);
+} else {
+    console.log('🆕 No CRT state found');
+}
+
+const savedCRTLog = await redisClient.get(REDIS_CRT_KEY + '_log');
+if (savedCRTLog) {
+    crtLog = JSON.parse(savedCRTLog);
+    console.log(`📡 CRT log: ${crtLog.length} entries`);
+}
+
 // ══════════════════════════════════════════════
 // API ROUTES
 // ══════════════════════════════════════════════
 app.get('/api/state', (req, res) => res.json({ marketState, activityLog, settings: appSettings }));
 app.get('/api/stats', (req, res) => res.json({ tradeStats: buildEnrichedStats(), alignmentCombos: ALIGNMENT_COMBOS }));
+app.get('/api/crt-state', (req, res) => res.json({ crtState, crtLog }));
 
 app.get('/api/settings', (req, res) => {
     res.json({ settings: appSettings, alignmentCombos: ALIGNMENT_COMBOS });
@@ -377,7 +420,7 @@ app.post('/api/settings', async (req, res) => {
     const validIds = ALIGNMENT_COMBOS.map(c => c.id);
     appSettings.activeAlignments = activeAlignments.filter(id => validIds.includes(id));
     await redisClient.set(REDIS_SETTINGS_KEY, JSON.stringify(appSettings));
-    console.log(`⚙️ Settings saved: ${appSettings.activeAlignments.length} alignments active: ${appSettings.activeAlignments.join(', ')}`);
+    console.log(`⚙️ Settings saved: ${appSettings.activeAlignments.length} alignments active`);
     broadcastAll({ settings: appSettings });
     res.json({ ok: true, settings: appSettings });
 });
@@ -406,6 +449,18 @@ app.get('/api/stats-stream', (req, res) => {
     req.on('close', () => { clearInterval(ka); statsClients = statsClients.filter(c => c.id !== id); });
 });
 
+app.get('/api/crt-stream', (req, res) => {
+    res.setHeader('Content-Type','text/event-stream');
+    res.setHeader('Cache-Control','no-cache');
+    res.setHeader('Connection','keep-alive');
+    res.setHeader('X-Accel-Buffering','no');
+    res.flushHeaders();
+    const id = Date.now();
+    crtClients.push({ id, res });
+    const ka = setInterval(() => res.write(': keepalive\n\n'), 15000);
+    req.on('close', () => { clearInterval(ka); crtClients = crtClients.filter(c => c.id !== id); });
+});
+
 app.post('/api/delete', async (req, res) => {
     const { symbol, action } = req.body;
     if (!symbol || action !== 'DELETE') return res.status(400).send("Invalid");
@@ -432,15 +487,33 @@ app.post('/api/delete-stats', async (req, res) => {
     res.send("Cleared");
 });
 
+app.post('/api/delete-crt', async (req, res) => {
+    const { symbol } = req.body;
+    if (!symbol) return res.status(400).send("Invalid");
+    const sym = symbol.toUpperCase().trim();
+    if (sym === "ALL") {
+        crtState = {};
+        crtLog = [];
+    } else {
+        if (crtState[sym]) delete crtState[sym];
+        crtLog = crtLog.filter(e => e.symbol !== sym);
+    }
+    await redisClient.set(REDIS_CRT_KEY, JSON.stringify(crtState));
+    await redisClient.set(REDIS_CRT_KEY + '_log', JSON.stringify(crtLog));
+    broadcastCRT();
+    res.send("Cleared");
+});
+
 // ══════════════════════════════════════════════
 // MAIN WEBHOOK
 // ══════════════════════════════════════════════
 app.post('/webhook', async (req, res) => {
     const payload = req.body;
 
-    const isStoryline  = payload.state !== undefined && payload.tf !== undefined && payload.coin === undefined && payload.action === undefined && payload.kind === undefined;
-    const isBreakout   = payload.kind === "BREAKOUT";
-    const isPineEntry  = payload.coin !== undefined && payload.action !== undefined && payload.kind === undefined;
+    const isStoryline = payload.state !== undefined && payload.tf !== undefined && payload.coin === undefined && payload.action === undefined && payload.kind === undefined;
+    const isBreakout  = payload.kind === "BREAKOUT";
+    const isCRT       = payload.kind === "CRT" || payload.kind === "CRT_TARGET" || payload.kind === "CRT_INVALID";
+    const isPineEntry = payload.coin !== undefined && payload.action !== undefined && payload.kind === undefined;
 
     // ════════════════════════════════════════
     // STORYLINE
@@ -523,10 +596,10 @@ app.post('/webhook', async (req, res) => {
 
         console.log(`  ✅ BREAKOUT ALIGNED [${align.type}] (${align.count}/6)`);
 
-        const dirEmoji    = direction === "BULLISH" ? "🚀 🐂" : "🩸 🐻";
-        const alignEmoji  = align.type === 'GOD' ? '✅' : '⚡';
-        const alignLabel  = align.type === 'GOD' ? `GOD-MODE (6/6)` : `PARTIAL (${align.count}/6)`;
-        const chartTfStr  = chartTf || payload.chart_tf || '?';
+        const dirEmoji   = direction === "BULLISH" ? "🚀 🐂" : "🩸 🐻";
+        const alignEmoji = align.type === 'GOD' ? '✅' : '⚡';
+        const alignLabel = align.type === 'GOD' ? `GOD-MODE (6/6)` : `PARTIAL (${align.count}/6)`;
+        const chartTfStr = chartTf || payload.chart_tf || '?';
 
         let tgMsg = `<b>${dirEmoji} BREAKOUT: ${sym}</b>\n\n`;
         tgMsg += `<b>Direction:</b> ${direction}\n`;
@@ -537,33 +610,16 @@ app.post('/webhook', async (req, res) => {
         const sentChannels = [];
 
         if (align.count === PARTIAL_THRESHOLD && align.type === 'PARTIAL') {
-            if (TG_BREAKOUT_5OF6) {
-                await sendTelegram(TG_BREAKOUT_5OF6, tgMsg);
-                sentChannels.push('5/6');
-            }
+            if (TG_BREAKOUT_5OF6) { await sendTelegram(TG_BREAKOUT_5OF6, tgMsg); sentChannels.push('5/6'); }
         }
-
         if (align.type === 'GOD') {
-            if (TG_BREAKOUT_6OF6) {
-                await sendTelegram(TG_BREAKOUT_6OF6, tgMsg);
-                sentChannels.push('6/6');
-            }
+            if (TG_BREAKOUT_6OF6) { await sendTelegram(TG_BREAKOUT_6OF6, tgMsg); sentChannels.push('6/6'); }
         }
-
-        const isWD4H1H = checkWD4H1HAlignment(sym, direction);
-        if (isWD4H1H) {
-            if (TG_BREAKOUT_WD4H1H) {
-                await sendTelegram(TG_BREAKOUT_WD4H1H, tgMsg);
-                sentChannels.push('W+D+4H+1H');
-            }
+        if (checkWD4H1HAlignment(sym, direction)) {
+            if (TG_BREAKOUT_WD4H1H) { await sendTelegram(TG_BREAKOUT_WD4H1H, tgMsg); sentChannels.push('W+D+4H+1H'); }
         }
-
-        const isCustom = checkCustomAlignment(sym, direction);
-        if (isCustom) {
-            if (TG_CUSTOM_ALIGNMENT) {
-                await sendTelegram(TG_CUSTOM_ALIGNMENT, tgMsg);
-                sentChannels.push('CUSTOM');
-            }
+        if (checkCustomAlignment(sym, direction)) {
+            if (TG_CUSTOM_ALIGNMENT) { await sendTelegram(TG_CUSTOM_ALIGNMENT, tgMsg); sentChannels.push('CUSTOM'); }
         }
 
         const channelStr = sentChannels.length > 0 ? ` → [${sentChannels.join(', ')}]` : '';
@@ -571,8 +627,100 @@ app.post('/webhook', async (req, res) => {
 
         broadcastAll();
         broadcastSoundAlert(sym, direction);
-
         console.log(`  ✅ Breakout processed: ${sym} ${direction} | Channels: ${sentChannels.join(', ') || 'none'}`);
+        return res.status(200).send("OK");
+    }
+
+    // ════════════════════════════════════════
+    // CRT ALERTS — CRT / CRT_TARGET / CRT_INVALID
+    // ════════════════════════════════════════
+    if (isCRT) {
+        const sym  = (payload.coin || '').toUpperCase().trim();
+        const tf   = (payload.tf   || '').toUpperCase().trim();
+        const side = (payload.side || '').toUpperCase().trim();
+        const rej  = payload.rej  || '---';
+        const bo   = payload.bo   || '---';
+        const ext  = payload.ext  || '---';
+        const tgt  = payload.tgt  || '---';
+
+        if (!sym || !tf || !side) {
+            console.log(`[CRT] Invalid payload — missing symbol/tf/side`);
+            return res.status(400).send("Invalid CRT Payload");
+        }
+
+        const validCRTTFs = ['1W', '1D', '4H'];
+        if (!validCRTTFs.includes(tf)) {
+            console.log(`[CRT] ${sym} | TF:${tf} — IGNORED (only 1W/1D/4H)`);
+            return res.status(200).send("OK — TF not accepted");
+        }
+
+        console.log(`\n[${payload.kind}] ${sym} | ${tf} | ${side} | Rej:${rej} BO:${bo} Ext:${ext} Tgt:${tgt}`);
+
+        if (!crtState[sym]) crtState[sym] = {};
+
+        const dirEmoji = side === 'BULLISH' ? '🐂' : '🐻';
+
+        // ── CRT FORMED → ACTIVE ──
+        if (payload.kind === 'CRT') {
+            crtState[sym][tf] = {
+                side,
+                rej,
+                bo,
+                ext,
+                tgt,
+                status:    'ACTIVE',
+                timestamp: Date.now(),
+                tp_time:   null,
+                inv_time:  null
+            };
+            const logMsg = `${dirEmoji} ${tf} CRT FORMED: ${side} | Rej:${rej} BO:${bo} Tgt:${tgt}`;
+            await pushCRTLog(sym, side, logMsg, { tf, rej, bo, ext, tgt, action: 'CRT_FORMED' });
+            console.log(`  ✅ CRT ACTIVE: ${sym} ${tf} ${side}`);
+        }
+
+        // ── CRT_TARGET → TP_HIT ──
+        if (payload.kind === 'CRT_TARGET') {
+            if (crtState[sym][tf]) {
+                crtState[sym][tf].status  = 'TP_HIT';
+                crtState[sym][tf].tp_time = Date.now();
+                // Update levels in case they changed
+                crtState[sym][tf].rej = rej;
+                crtState[sym][tf].bo  = bo;
+                crtState[sym][tf].ext = ext;
+                crtState[sym][tf].tgt = tgt;
+            } else {
+                crtState[sym][tf] = { side, rej, bo, ext, tgt, status: 'TP_HIT', timestamp: Date.now(), tp_time: Date.now(), inv_time: null };
+            }
+            const logMsg = `🎯 ${tf} CRT TARGET HIT: ${side} | Tgt:${tgt}`;
+            await pushCRTLog(sym, side, logMsg, { tf, tgt, action: 'CRT_TARGET' });
+            console.log(`  🎯 CRT TP HIT: ${sym} ${tf} ${side}`);
+        }
+
+        // ── CRT_INVALID → INVALID ──
+        if (payload.kind === 'CRT_INVALID') {
+            if (crtState[sym][tf]) {
+                crtState[sym][tf].status   = 'INVALID';
+                crtState[sym][tf].inv_time = Date.now();
+                crtState[sym][tf].rej = rej;
+                crtState[sym][tf].bo  = bo;
+                crtState[sym][tf].ext = ext;
+                crtState[sym][tf].tgt = tgt;
+            } else {
+                crtState[sym][tf] = { side, rej, bo, ext, tgt, status: 'INVALID', timestamp: Date.now(), tp_time: null, inv_time: Date.now() };
+            }
+            const logMsg = `❌ ${tf} CRT INVALIDATED: ${side} | Ext:${ext}`;
+            await pushCRTLog(sym, side, logMsg, { tf, ext, action: 'CRT_INVALID' });
+            console.log(`  ❌ CRT INVALID: ${sym} ${tf} ${side}`);
+        }
+
+        await redisClient.set(REDIS_CRT_KEY, JSON.stringify(crtState));
+        broadcastCRT();
+
+        // Only play sound on new CRT formed
+        if (payload.kind === 'CRT') {
+            broadcastCRTSound(sym, side);
+        }
+
         return res.status(200).send("OK");
     }
 
@@ -756,6 +904,7 @@ app.get('/',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'ind
 app.get('/stats', (req, res) => res.sendFile(path.join(__dirname, 'public', 'stats.html')));
 app.get('/wdh',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'wdh.html')));
 app.get('/dh1h',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'dh1h.html')));
+app.get('/crt',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'crt.html')));
 
 // ══════════════════════════════════════════════
 // START
@@ -765,9 +914,10 @@ app.listen(PORT, () => {
     console.log(`📊 Alignment: ${GOD_THRESHOLD}/6 = GOD, ${PARTIAL_THRESHOLD}/6 = PARTIAL`);
     console.log(`📡 Entry TFs: ${ENTRY_TFS.join(', ')}`);
     console.log(`📡 Combos: ${ALIGNMENT_COMBOS.length} tracked`);
-    console.log(`📡 Breakout 5/6: ${TG_BREAKOUT_5OF6 || 'NOT SET'}`);
-    console.log(`📡 Breakout 6/6: ${TG_BREAKOUT_6OF6 || 'NOT SET'}`);
-    console.log(`📡 Breakout W+D+4H+1H: ${TG_BREAKOUT_WD4H1H || 'NOT SET'}`);
-    console.log(`📡 Custom Alignment: ${TG_CUSTOM_ALIGNMENT || 'NOT SET'}`);
-    console.log(`⚙️ Active Alignments: ${appSettings.activeAlignments.length > 0 ? appSettings.activeAlignments.join(', ') : 'NONE'}`);
+    console.log(`📡 Breakout 5/6:       ${TG_BREAKOUT_5OF6    || 'NOT SET'}`);
+    console.log(`📡 Breakout 6/6:       ${TG_BREAKOUT_6OF6    || 'NOT SET'}`);
+    console.log(`📡 Breakout W+D+4H+1H: ${TG_BREAKOUT_WD4H1H  || 'NOT SET'}`);
+    console.log(`📡 Custom Alignment:   ${TG_CUSTOM_ALIGNMENT  || 'NOT SET'}`);
+    console.log(`⚙️ Active Alignments:  ${appSettings.activeAlignments.length > 0 ? appSettings.activeAlignments.join(', ') : 'NONE'}`);
+    console.log(`🔄 CRT symbols loaded: ${Object.keys(crtState).length}`);
 });
