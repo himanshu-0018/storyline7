@@ -338,26 +338,27 @@
                 let latestTs = 0;
                 CRT_TFS.forEach(tf => { if (data[tf]?.timestamp > latestTs) latestTs = data[tf].timestamp; });
 
-                // TF cells — like storyline but 3 columns
-                let tfCells = '';
-                CRT_TFS.forEach(tf => {
-                    const d = data[tf];
-                    const cellCls = tfCellCls(d);
-                    const emoji = tfSideEmoji(d);
-                    const statusHTML = statusBadgeHTML(d?.status);
-                    const sideText = d?.side || 'NONE';
+                // TF cells — like storyline but 3 columns, each with own time
+let tfCells = '';
+CRT_TFS.forEach(tf => {
+    const d = data[tf];
+    const cellCls = tfCellCls(d);
+    const emoji = tfSideEmoji(d);
+    const statusHTML = statusBadgeHTML(d?.status);
+    const sideText = d?.side || 'NONE';
+    const tfTime = d?.timestamp ? fmtTime(d.timestamp) : '';
 
-                    tfCells += `
-                        <div class="tf-cell ${cellCls}">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-                                <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
-                                <span style="font-size:0.65rem;">${emoji}</span>
-                            </div>
-                            <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${sideText}</div>
-                            ${d?.side ? statusHTML : ''}
-                        </div>`;
-                });
-
+    tfCells += `
+        <div class="tf-cell ${cellCls}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
+                <span style="font-size:0.65rem;">${emoji}</span>
+            </div>
+            <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${sideText}</div>
+            ${d?.side ? statusHTML : ''}
+            ${tfTime ? `<div style="color:rgba(148,163,184,0.35);font-size:0.38rem;margin-top:3px;">🕐 ${tfTime}</div>` : ''}
+        </div>`;
+});
                 const alignBar = getAlignBarInfo(sym);
 
                 grid.insertAdjacentHTML('beforeend', `
