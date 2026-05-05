@@ -19,9 +19,15 @@
         .orb-1 { width:400px;height:400px;background:rgba(245,158,11,0.12);top:-100px;left:-100px;animation-duration:18s; }
         .orb-2 { width:350px;height:350px;background:rgba(14,165,233,0.12);top:20%;right:-80px;animation-duration:22s;animation-delay:3s; }
         .orb-3 { width:300px;height:300px;background:rgba(16,185,129,0.10);bottom:10%;left:20%;animation-duration:16s;animation-delay:6s; }
+        .orb-4 { width:250px;height:250px;background:rgba(245,158,11,0.09);bottom:-80px;right:30%;animation-duration:20s;animation-delay:9s; }
         @keyframes orbFloat { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(30px,-40px) scale(1.1);} 66%{transform:translate(-20px,30px) scale(0.95);} }
         .scan-beam { position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(245,158,11,0.6),rgba(251,191,36,0.8),rgba(245,158,11,0.6),transparent);animation:scanMove 10s ease-in-out infinite;box-shadow:0 0 20px rgba(245,158,11,0.4); }
         @keyframes scanMove { 0%{top:0%;opacity:0;} 10%{opacity:1;} 90%{opacity:1;} 100%{top:100%;opacity:0;} }
+        .candle-bar-bg { position:absolute;bottom:0;left:0;right:0;height:220px;display:flex;align-items:flex-end;gap:6px;padding:0 16px;opacity:0.08; }
+        .cbar { flex:1;border-radius:2px 2px 0 0;animation:cbarGrow 4s ease-in-out infinite; }
+        .cbar.g { background:linear-gradient(to top,#10b981,#34d399); }
+        .cbar.r { background:linear-gradient(to top,#ef4444,#f87171); }
+        @keyframes cbarGrow { 0%,100%{transform:scaleY(1);opacity:0.8;} 50%{transform:scaleY(1.12);opacity:1;} }
 
         .top-bar { position:relative;z-index:10;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:1px solid rgba(255,255,255,0.08);background:rgba(10,14,26,0.6);backdrop-filter:blur(20px); }
         .brand-name { font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;letter-spacing:0.05em;background:linear-gradient(135deg,#fbbf24,#f59e0b,#d97706);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
@@ -29,74 +35,81 @@
         .ctrl-btn { display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:10px;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;cursor:pointer;transition:all 0.2s ease;border:1px solid;backdrop-filter:blur(10px);font-family:'JetBrains Mono',monospace;text-decoration:none; }
         .ctrl-btn:hover { transform:translateY(-2px); }
         .btn-back { background:linear-gradient(135deg,rgba(99,102,241,0.25),rgba(14,165,233,0.15));border-color:rgba(99,102,241,0.5);color:#a5b4fc; }
+        .btn-back:hover { background:linear-gradient(135deg,rgba(99,102,241,0.4),rgba(14,165,233,0.25));color:#c7d2fe; }
         .btn-clear { background:linear-gradient(135deg,rgba(239,68,68,0.25),rgba(153,27,27,0.15));border-color:rgba(239,68,68,0.5);color:#fca5a5; }
+        .btn-clear:hover { background:linear-gradient(135deg,rgba(239,68,68,0.4),rgba(153,27,27,0.25));color:#fee2e2; }
         .btn-sound { background:rgba(30,41,59,0.7);border-color:rgba(71,85,105,0.5);color:#94a3b8; }
         .btn-sound:hover { border-color:rgba(100,116,139,0.8);color:#cbd5e1; }
         .btn-sound.on { background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(52,211,153,0.1));border-color:rgba(16,185,129,0.5);color:#34d399;box-shadow:0 0 20px rgba(16,185,129,0.15); }
-        .live-badge { display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3); }
+        .stat-chip { display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:10px;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(10px); }
+        .live-badge { display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);backdrop-filter:blur(10px); }
         .live-badge.offline { background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3); }
         .pulse-dot { width:7px;height:7px;border-radius:50%;background:#10b981;position:relative; }
         .pulse-dot::after { content:'';position:absolute;inset:-3px;border-radius:50%;background:rgba(16,185,129,0.4);animation:pulseRing 1.5s ease-in-out infinite; }
         .offline .pulse-dot { background:#ef4444; }
         .offline .pulse-dot::after { background:rgba(239,68,68,0.4); }
         @keyframes pulseRing { 0%,100%{transform:scale(0.9);opacity:0.9;} 50%{transform:scale(1.5);opacity:0;} }
-        .stat-chip { display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:10px;background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.07); }
 
         .stats-bar { position:relative;z-index:10;display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(8,12,22,0.5);backdrop-filter:blur(10px);flex-wrap:wrap; }
         .stats-pill { display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font-size:0.68rem;font-weight:700;font-family:'JetBrains Mono',monospace; }
         .sp-bull { background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399; }
         .sp-bear { background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171; }
-        .sp-total { background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);color:#fbbf24; }
-        .sp-tf { background:rgba(14,165,233,0.12);border:1px solid rgba(14,165,233,0.25);color:#38bdf8; }
+        .sp-active { background:rgba(14,165,233,0.12);border:1px solid rgba(14,165,233,0.25);color:#38bdf8; }
         .sp-tp { background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#34d399; }
         .sp-inv { background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:#f87171; }
+        .sp-total { background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);color:#fbbf24; }
         .divider-v { width:1px;height:16px;background:rgba(255,255,255,0.1); }
 
         .main-layout { position:relative;z-index:10;display:flex;gap:16px;padding:16px 24px;flex:1;overflow:hidden;height:calc(100vh - 130px); }
         .coin-section { flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(245,158,11,0.3) transparent; }
         .coin-section::-webkit-scrollbar { width:4px; }
         .coin-section::-webkit-scrollbar-thumb { background:rgba(245,158,11,0.3);border-radius:4px; }
-        .coin-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px; }
+        .coin-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px; }
 
-        .crt-card { border-radius:16px;padding:16px;position:relative;overflow:hidden;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:default; }
-        .crt-card::before { content:'';position:absolute;inset:0;border-radius:16px;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none; }
-        .crt-card:hover { transform:translateY(-4px) scale(1.01); }
-        .crt-card-idle { background:linear-gradient(135deg,rgba(15,23,42,0.85),rgba(20,30,55,0.80));border:1px solid rgba(255,255,255,0.07);opacity:0.7; }
-        .crt-card-bull { background:linear-gradient(135deg,rgba(5,46,22,0.9) 0%,rgba(6,78,59,0.75) 50%,rgba(15,30,50,0.85) 100%);border:1px solid rgba(16,185,129,0.4);box-shadow:0 0 30px rgba(16,185,129,0.12),0 8px 32px rgba(0,0,0,0.4); }
-        .crt-card-bull::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#10b981,#34d399,#10b981,transparent);animation:shimmer 3s ease-in-out infinite; }
-        .crt-card-bear { background:linear-gradient(135deg,rgba(69,10,10,0.9) 0%,rgba(127,29,29,0.75) 50%,rgba(15,20,45,0.85) 100%);border:1px solid rgba(239,68,68,0.4);box-shadow:0 0 30px rgba(239,68,68,0.12),0 8px 32px rgba(0,0,0,0.4); }
-        .crt-card-bear::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#ef4444,#f87171,#ef4444,transparent);animation:shimmer 3s ease-in-out infinite; }
-        .crt-card-mixed { background:linear-gradient(135deg,rgba(30,20,50,0.9) 0%,rgba(50,30,80,0.75) 50%,rgba(15,20,45,0.85) 100%);border:1px solid rgba(167,139,250,0.4);box-shadow:0 0 30px rgba(167,139,250,0.12),0 8px 32px rgba(0,0,0,0.4); }
-        .crt-card-mixed::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#a78bfa,#c4b5fd,#a78bfa,transparent);animation:shimmer 3s ease-in-out infinite; }
+        /* ── COIN CARDS (storyline style) ── */
+        .coin-card { border-radius:16px;padding:16px;position:relative;overflow:hidden;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:default; }
+        .coin-card::before { content:'';position:absolute;inset:0;border-radius:16px;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none; }
+        .coin-card:hover { transform:translateY(-4px) scale(1.01); }
+        .card-idle { background:linear-gradient(135deg,rgba(15,23,42,0.85),rgba(20,30,55,0.80));border:1px solid rgba(255,255,255,0.07);box-shadow:0 4px 20px rgba(0,0,0,0.3);opacity:0.6;filter:saturate(0.7); }
+        .card-idle:hover { opacity:0.85;filter:saturate(1); }
+        .card-bull { background:linear-gradient(135deg,rgba(5,46,22,0.9) 0%,rgba(6,78,59,0.75) 50%,rgba(15,30,50,0.85) 100%);border:1px solid rgba(16,185,129,0.4);box-shadow:0 0 30px rgba(16,185,129,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(52,211,153,0.15); }
+        .card-bull::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#10b981,#34d399,#10b981,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-bear { background:linear-gradient(135deg,rgba(69,10,10,0.9) 0%,rgba(127,29,29,0.75) 50%,rgba(15,20,45,0.85) 100%);border:1px solid rgba(239,68,68,0.4);box-shadow:0 0 30px rgba(239,68,68,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(248,113,113,0.15); }
+        .card-bear::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#ef4444,#f87171,#ef4444,transparent);animation:shimmer 3s ease-in-out infinite; }
+        .card-mixed { background:linear-gradient(135deg,rgba(30,20,50,0.9) 0%,rgba(50,30,80,0.75) 50%,rgba(15,20,45,0.85) 100%);border:1px solid rgba(167,139,250,0.4);box-shadow:0 0 30px rgba(167,139,250,0.12),0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(196,181,253,0.15); }
+        .card-mixed::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#a78bfa,#c4b5fd,#a78bfa,transparent);animation:shimmer 3s ease-in-out infinite; }
         @keyframes shimmer { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
 
-        .crt-sym { font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800;color:#f1f5f9; }
-        .crt-badge { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px; }
-        .crt-badge-bull { background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(52,211,153,0.15));border:1px solid rgba(52,211,153,0.4);color:#6ee7b7; }
-        .crt-badge-bear { background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(248,113,113,0.15));border:1px solid rgba(248,113,113,0.4);color:#fca5a5; }
-        .crt-badge-mixed { background:linear-gradient(135deg,rgba(167,139,250,0.3),rgba(196,181,253,0.15));border:1px solid rgba(167,139,250,0.4);color:#c4b5fd; }
-        .crt-badge-idle { background:rgba(71,85,105,0.3);border:1px solid rgba(71,85,105,0.4);color:#64748b; }
-        .crt-time { font-family:'JetBrains Mono',monospace;font-size:0.48rem;color:rgba(148,163,184,0.4);margin-top:3px; }
+        .card-symbol { font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:0.02em;line-height:1; }
+        .card-time { font-family:'JetBrains Mono',monospace;font-size:0.52rem;color:rgba(148,163,184,0.5);letter-spacing:0.06em;margin-top:4px; }
+        .card-badge-bull { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(52,211,153,0.15));border:1px solid rgba(52,211,153,0.4);color:#6ee7b7; }
+        .card-badge-bear { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(239,68,68,0.3),rgba(248,113,113,0.15));border:1px solid rgba(248,113,113,0.4);color:#fca5a5; }
+        .card-badge-mixed { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(167,139,250,0.3),rgba(196,181,253,0.15));border:1px solid rgba(167,139,250,0.4);color:#c4b5fd; }
+        .card-badge-idle { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:rgba(71,85,105,0.3);border:1px solid rgba(71,85,105,0.4);color:#64748b; }
 
-        /* TF rows with statuss */
-        .tf-table-crt { width:100%;border-collapse:collapse;margin-top:10px; }
-        .tf-table-crt th { font-family:'JetBrains Mono',monospace;font-size:0.42rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(148,163,184,0.4);padding:4px 5px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06); }
-        .tf-table-crt th:first-child { text-align:left; }
-        .tf-table-crt td { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:600;padding:6px 5px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04); }
-        .tf-table-crt td:first-child { text-align:left; }
-        .td-side-bull { color:#34d399; }
-        .td-side-bear { color:#f87171; }
-        .td-side-none { color:#64748b; }
-        .td-val { color:rgba(203,213,225,0.7);cursor:pointer; }
-        .td-val:hover { color:#fbbf24; }
+        /* ── TF ROW (3 columns like storyline's 6) ── */
+        .tf-row { display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:10px; }
+        .tf-cell { padding:8px 4px;border-radius:9px;font-family:'JetBrains Mono',monospace;font-size:0.50rem;text-align:center; }
+        .tf-cell-bull { background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.25); }
+        .tf-cell-bear { background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.25); }
+        .tf-cell-none { background:rgba(15,23,42,0.5);border:1px solid rgba(71,85,105,0.2); }
 
-        .status-badge { font-family:'JetBrains Mono',monospace;font-size:0.45rem;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.06em; }
+        /* ── STATUS BADGES ── */
+        .status-badge { font-family:'JetBrains Mono',monospace;font-size:0.42rem;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.04em;display:inline-block;margin-top:3px; }
         .status-active { background:rgba(14,165,233,0.2);border:1px solid rgba(14,165,233,0.4);color:#38bdf8; }
         .status-tp { background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#34d399; }
         .status-invalid { background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171; }
-        .status-none { background:rgba(71,85,105,0.2);border:1px solid rgba(71,85,105,0.3);color:#64748b; }
+        .status-none { background:rgba(71,85,105,0.15);border:1px solid rgba(71,85,105,0.3);color:#475569; }
 
-        .feed-panel { width:300px;flex-shrink:0;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);background:rgba(8,12,22,0.85);backdrop-filter:blur(24px); }
+        /* ── ALIGN BAR ── */
+        .align-bar { margin-top:8px;padding:6px 10px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.55rem;display:flex;align-items:center;gap:8px; }
+        .align-bar-bull { background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399; }
+        .align-bar-bear { background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171; }
+        .align-bar-mixed { background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);color:#c4b5fd; }
+        .align-bar-none { background:rgba(71,85,105,0.15);border:1px solid rgba(71,85,105,0.3);color:#64748b; }
+
+        /* ── FEED PANEL ── */
+        .feed-panel { width:280px;flex-shrink:0;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);background:rgba(8,12,22,0.85);backdrop-filter:blur(24px); }
         .feed-header { padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(251,191,36,0.08));display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
         .feed-title { font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;color:#fbbf24;letter-spacing:0.1em; }
         .feed-body { flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(245,158,11,0.3) transparent; }
@@ -107,8 +120,8 @@
         .log-card { padding:10px 12px;border-radius:10px;animation:logSlide 0.3s ease-out; }
         .log-card-bull { background:linear-gradient(135deg,rgba(5,46,22,0.8),rgba(6,78,59,0.4));border:1px solid rgba(16,185,129,0.25);border-left:3px solid #10b981; }
         .log-card-bear { background:linear-gradient(135deg,rgba(69,10,10,0.8),rgba(127,29,29,0.4));border:1px solid rgba(239,68,68,0.25);border-left:3px solid #ef4444; }
-        .log-card-tp { background:linear-gradient(135deg,rgba(5,46,22,0.8),rgba(6,78,59,0.4));border:1px solid rgba(16,185,129,0.4);border-left:3px solid #34d399; }
-        .log-card-inv { background:linear-gradient(135deg,rgba(50,20,20,0.8),rgba(80,30,30,0.4));border:1px solid rgba(239,68,68,0.4);border-left:3px solid #ef4444; }
+        .log-card-tp { background:linear-gradient(135deg,rgba(5,50,30,0.8),rgba(6,90,65,0.4));border:1px solid rgba(52,211,153,0.35);border-left:3px solid #34d399; }
+        .log-card-inv { background:linear-gradient(135deg,rgba(60,15,15,0.8),rgba(100,25,25,0.4));border:1px solid rgba(248,113,113,0.35);border-left:3px solid #f87171; }
         @keyframes logSlide { from{opacity:0;transform:translateX(12px);} to{opacity:1;transform:translateX(0);} }
         .log-sym { font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;color:#f1f5f9; }
         .log-msg { font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:rgba(203,213,225,0.75);margin-top:3px; }
@@ -126,8 +139,15 @@
 
     <div class="bg-container">
         <div class="bg-photo"></div><div class="bg-gradient"></div><div class="bg-grid"></div>
-        <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+        <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div><div class="orb orb-4"></div>
         <div class="scan-beam"></div>
+        <div class="candle-bar-bg">
+            <div class="cbar g" style="height:45%"></div><div class="cbar r" style="height:60%;animation-delay:.3s"></div>
+            <div class="cbar g" style="height:35%;animation-delay:.6s"></div><div class="cbar g" style="height:75%;animation-delay:.1s"></div>
+            <div class="cbar r" style="height:50%;animation-delay:.8s"></div><div class="cbar r" style="height:38%;animation-delay:.4s"></div>
+            <div class="cbar g" style="height:82%;animation-delay:.2s"></div><div class="cbar g" style="height:63%;animation-delay:.7s"></div>
+            <div class="cbar r" style="height:47%;animation-delay:.5s"></div><div class="cbar g" style="height:90%;animation-delay:.9s"></div>
+        </div>
     </div>
 
     <div class="top-bar">
@@ -161,7 +181,7 @@
         <span id="bullPill" class="stats-pill sp-bull">🐂 0 BULL</span>
         <span id="bearPill" class="stats-pill sp-bear">🐻 0 BEAR</span>
         <div class="divider-v"></div>
-        <span id="activePill" class="stats-pill sp-tf">🔵 0 ACTIVE</span>
+        <span id="activePill" class="stats-pill sp-active">🔵 0 ACTIVE</span>
         <span id="tpPill" class="stats-pill sp-tp">🎯 0 TP HIT</span>
         <span id="invPill" class="stats-pill sp-inv">❌ 0 INVALID</span>
         <div class="divider-v"></div>
@@ -177,10 +197,10 @@
         <div class="feed-panel">
             <div class="feed-header">
                 <span class="feed-title">📡 CRT FEED</span>
-                <span class="feed-count" id="feedCount">0</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:rgba(251,191,36,0.5);letter-spacing:0.08em;">NEWEST FIRST</span>
             </div>
             <div class="feed-body" id="activityFeed">
-                <p style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">Waiting for CRT signals...</p>
+                <p style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">Awaiting CRT signals...</p>
             </div>
         </div>
     </div>
@@ -216,55 +236,61 @@
             return old ? d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+t : t;
         }
 
-        function copyVal(val, e) {
-            if (!val || val === '---') return;
-            navigator.clipboard.writeText(val);
-            const t = document.createElement('div');
-            t.textContent = '📋 ' + val;
-            t.style.cssText = `position:fixed;z-index:999;pointer-events:none;left:${e.clientX+10}px;top:${e.clientY-30}px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;font-weight:700;padding:5px 12px;border-radius:8px;background:rgba(245,158,11,0.92);color:white;border:1px solid rgba(251,191,36,0.6);transition:all 0.4s ease;`;
-            document.body.appendChild(t);
-            setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(-10px)'; }, 700);
-            setTimeout(() => t.remove(), 1100);
-        }
-
         function getCardType(sym) {
             const data = crtState[sym];
             if (!data) return 'idle';
-            const activeSides = CRT_TFS.map(tf => data[tf]?.side).filter(s => s);
-            if (activeSides.length === 0) return 'idle';
-            const allBull = activeSides.every(s => s === 'BULLISH');
-            const allBear = activeSides.every(s => s === 'BEARISH');
-            if (allBull) return 'bull';
-            if (allBear) return 'bear';
+            const sides = CRT_TFS.map(tf => data[tf]?.side).filter(s => s);
+            if (sides.length === 0) return 'idle';
+            if (sides.every(s => s === 'BULLISH')) return 'bull';
+            if (sides.every(s => s === 'BEARISH')) return 'bear';
             return 'mixed';
         }
 
-        function statusBadge(status) {
-            if (status === 'ACTIVE')  return '<span class="status-badge status-active">🔵 ACTIVE</span>';
+        function getAlignBarInfo(sym) {
+            const data = crtState[sym];
+            if (!data) return { cls: 'align-bar-none', txt: '— No CRT signals' };
+            const active = CRT_TFS.filter(tf => data[tf]?.status === 'ACTIVE').length;
+            const tp = CRT_TFS.filter(tf => data[tf]?.status === 'TP_HIT').length;
+            const inv = CRT_TFS.filter(tf => data[tf]?.status === 'INVALID').length;
+            const total = active + tp + inv;
+            if (total === 0) return { cls: 'align-bar-none', txt: '— No CRT signals' };
+
+            const type = getCardType(sym);
+            const parts = [];
+            if (active > 0) parts.push(`🔵 ${active} Active`);
+            if (tp > 0) parts.push(`🎯 ${tp} TP`);
+            if (inv > 0) parts.push(`❌ ${inv} Inv`);
+
+            if (type === 'bull') return { cls: 'align-bar-bull', txt: `🐂 ${parts.join(' · ')}` };
+            if (type === 'bear') return { cls: 'align-bar-bear', txt: `🐻 ${parts.join(' · ')}` };
+            if (type === 'mixed') return { cls: 'align-bar-mixed', txt: `🔀 ${parts.join(' · ')}` };
+            return { cls: 'align-bar-none', txt: parts.join(' · ') };
+        }
+
+        function tfCellCls(d) {
+            if (!d || !d.side) return 'tf-cell-none';
+            return d.side === 'BULLISH' ? 'tf-cell-bull' : 'tf-cell-bear';
+        }
+
+        function tfSideEmoji(d) {
+            if (!d || !d.side) return '—';
+            return d.side === 'BULLISH' ? '🐂' : '🐻';
+        }
+
+        function statusBadgeHTML(status) {
+            if (status === 'ACTIVE')  return '<span class="status-badge status-active">ACTIVE</span>';
             if (status === 'TP_HIT')  return '<span class="status-badge status-tp">🎯 TP HIT</span>';
             if (status === 'INVALID') return '<span class="status-badge status-invalid">❌ INVALID</span>';
             return '<span class="status-badge status-none">—</span>';
         }
 
-        function sideClass(side) {
-            if (side === 'BULLISH') return 'td-side-bull';
-            if (side === 'BEARISH') return 'td-side-bear';
-            return 'td-side-none';
-        }
-
-        function sideEmoji(side) {
-            if (side === 'BULLISH') return '🐂';
-            if (side === 'BEARISH') return '🐻';
-            return '—';
-        }
-
         function render() {
             const grid = document.getElementById('coinGrid');
             const syms = Object.keys(crtState).sort((a, b) => {
-                const pa = { bull:3, bear:3, mixed:2, idle:0 }[getCardType(a)] || 0;
-                const pb = { bull:3, bear:3, mixed:2, idle:0 }[getCardType(b)] || 0;
+                const pri = { bull:3, bear:3, mixed:2, idle:0 };
+                const pa = pri[getCardType(a)] || 0;
+                const pb = pri[getCardType(b)] || 0;
                 if (pa !== pb) return pb - pa;
-                // Secondary sort: most recent first
                 const ta = Math.max(...CRT_TFS.map(tf => crtState[a]?.[tf]?.timestamp || 0));
                 const tb = Math.max(...CRT_TFS.map(tf => crtState[b]?.[tf]?.timestamp || 0));
                 return tb - ta;
@@ -275,7 +301,7 @@
             syms.forEach(sym => {
                 CRT_TFS.forEach(tf => {
                     const d = crtState[sym]?.[tf];
-                    if (!d) return;
+                    if (!d || !d.side) return;
                     if (d.side === 'BULLISH') totalBull++;
                     if (d.side === 'BEARISH') totalBear++;
                     if (d.status === 'ACTIVE') totalActive++;
@@ -301,70 +327,64 @@
             syms.forEach(sym => {
                 const data = crtState[sym];
                 const type = getCardType(sym);
-                const cardCls = type === 'bull' ? 'crt-card-bull' : type === 'bear' ? 'crt-card-bear' : type === 'mixed' ? 'crt-card-mixed' : 'crt-card-idle';
-                const badgeCls = type === 'bull' ? 'crt-badge-bull' : type === 'bear' ? 'crt-badge-bear' : type === 'mixed' ? 'crt-badge-mixed' : 'crt-badge-idle';
-                const badgeTxt = type === 'bull' ? '🐂 BULLISH' : type === 'bear' ? '🐻 BEARISH' : type === 'mixed' ? '🔀 MIXED' : '—';
+                const cardCls = type === 'bull' ? 'card-bull' : type === 'bear' ? 'card-bear' : type === 'mixed' ? 'card-mixed' : 'card-idle';
+
+                let badgeHTML;
+                if (type === 'bull') badgeHTML = '<span class="card-badge-bull">🐂 BULLISH</span>';
+                else if (type === 'bear') badgeHTML = '<span class="card-badge-bear">🐻 BEARISH</span>';
+                else if (type === 'mixed') badgeHTML = '<span class="card-badge-mixed">🔀 MIXED</span>';
+                else badgeHTML = '<span class="card-badge-idle">—</span>';
 
                 let latestTs = 0;
                 CRT_TFS.forEach(tf => { if (data[tf]?.timestamp > latestTs) latestTs = data[tf].timestamp; });
 
-                // Table rows for each TF
-                let tfRows = '';
+                // TF cells — like storyline but 3 columns
+                let tfCells = '';
                 CRT_TFS.forEach(tf => {
                     const d = data[tf];
-                    if (!d || !d.side) {
-                        tfRows += `<tr>
-                            <td class="td-side-none">${tf}</td>
-                            <td class="td-side-none">—</td>
-                            <td class="td-side-none">—</td>
-                            <td class="td-side-none">—</td>
-                            <td class="td-side-none">—</td>
-                            <td class="td-side-none">—</td>
-                            <td>${statusBadge(null)}</td>
-                        </tr>`;
-                    } else {
-                        tfRows += `<tr>
-                            <td class="${sideClass(d.side)}">${tf} ${sideEmoji(d.side)}</td>
-                            <td class="td-val" onclick="copyVal('${d.rej}',event)">${d.rej||'---'}</td>
-                            <td class="td-val" onclick="copyVal('${d.bo}',event)">${d.bo||'---'}</td>
-                            <td class="td-val" onclick="copyVal('${d.ext}',event)">${d.ext||'---'}</td>
-                            <td class="td-val" onclick="copyVal('${d.tgt}',event)">${d.tgt||'---'}</td>
-                            <td style="font-size:0.48rem;color:rgba(148,163,184,0.4);">${fmtTime(d.timestamp)}</td>
-                            <td>${statusBadge(d.status)}</td>
-                        </tr>`;
-                    }
+                    const cellCls = tfCellCls(d);
+                    const emoji = tfSideEmoji(d);
+                    const statusHTML = statusBadgeHTML(d?.status);
+                    const sideText = d?.side || 'NONE';
+
+                    tfCells += `
+                        <div class="tf-cell ${cellCls}">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                                <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
+                                <span style="font-size:0.65rem;">${emoji}</span>
+                            </div>
+                            <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${sideText}</div>
+                            ${d?.side ? statusHTML : ''}
+                        </div>`;
                 });
 
+                const alignBar = getAlignBarInfo(sym);
+
                 grid.insertAdjacentHTML('beforeend', `
-                    <div class="crt-card ${cardCls}">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+                    <div class="coin-card ${cardCls}">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                             <div>
-                                <div class="crt-sym">${sym}</div>
-                                <div class="crt-time">🕐 ${latestTs ? fmtTime(latestTs) : 'N/A'}</div>
+                                <div class="card-symbol">${sym}</div>
+                                <div class="card-time">🕐 ${latestTs ? fmtTime(latestTs) : 'N/A'}</div>
                             </div>
-                            <span class="crt-badge ${badgeCls}">${badgeTxt}</span>
+                            ${badgeHTML}
                         </div>
-                        <table class="tf-table-crt">
-                            <thead><tr>
-                                <th>TF</th><th>REJ</th><th>BO</th><th>EXT</th><th>TGT</th><th>TIME</th><th>STATUS</th>
-                            </tr></thead>
-                            <tbody>${tfRows}</tbody>
-                        </table>
+                        <div class="tf-row">
+                            ${tfCells}
+                        </div>
+                        <div class="align-bar ${alignBar.cls}">${alignBar.txt}</div>
                     </div>`);
             });
         }
 
         function rebuildFeed() {
             const feed = document.getElementById('activityFeed');
-            const countEl = document.getElementById('feedCount');
 
             if (!crtLog.length) {
-                feed.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">Waiting for CRT signals...</p>`;
-                countEl.textContent = '0';
+                feed.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">Awaiting CRT signals...</p>`;
                 return;
             }
 
-            countEl.textContent = crtLog.length;
             feed.innerHTML = crtLog.slice(0, 100).map(e => {
                 let cls;
                 if (e.action === 'CRT_TARGET') cls = 'log-card log-card-tp';
@@ -372,11 +392,16 @@
                 else if (e.side === 'BULLISH') cls = 'log-card log-card-bull';
                 else cls = 'log-card log-card-bear';
 
-                const tc = e.side === 'BULLISH' ? 'rgba(52,211,153,0.8)' : 'rgba(248,113,113,0.8)';
-                const icon = e.action === 'CRT_TARGET' ? '🎯' : e.action === 'CRT_INVALID' ? '❌' : (e.side === 'BULLISH' ? '🐂' : '🐻');
+                const tc = e.action === 'CRT_TARGET' ? 'rgba(52,211,153,0.8)' :
+                           e.action === 'CRT_INVALID' ? 'rgba(248,113,113,0.8)' :
+                           e.side === 'BULLISH' ? 'rgba(52,211,153,0.8)' : 'rgba(248,113,113,0.8)';
+
+                const icon = e.action === 'CRT_TARGET' ? '🎯' :
+                             e.action === 'CRT_INVALID' ? '❌' :
+                             e.side === 'BULLISH' ? '🐂' : '🐻';
 
                 return `<div class="${cls}">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
                         <span class="log-sym">${icon} ${e.symbol}</span>
                         <div style="display:flex;align-items:center;gap:4px;">
                             ${e.tf ? `<span class="log-tf-tag">${e.tf}</span>` : ''}
