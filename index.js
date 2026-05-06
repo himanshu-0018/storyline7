@@ -18,7 +18,6 @@ const TG_1M_ENTRIES = process.env.TG_1M_ENTRIES;
 const TG_3M_ENTRIES = process.env.TG_3M_ENTRIES;
 const TG_5M_ENTRIES = process.env.TG_5M_ENTRIES;
 
-// ═══ BREAKOUT TELEGRAM CHANNELS ═══
 const TG_BREAKOUT_5OF6    = process.env.TG_BREAKOUT_5OF6;
 const TG_BREAKOUT_6OF6    = process.env.TG_BREAKOUT_6OF6;
 const TG_BREAKOUT_WD4H1H  = process.env.TG_BREAKOUT_WD4H1H;
@@ -30,10 +29,11 @@ const REDIS_STATS_KEY     = REDIS_STATE_KEY + '_tradeStats';
 const REDIS_SETTINGS_KEY  = REDIS_STATE_KEY + '_settings';
 const REDIS_CRT_KEY       = REDIS_STATE_KEY + '_crt';
 
-const ZONE_TIMEFRAMES     = ["1W", "1D", "4H", "1H", "30M", "15M"];
-const GOD_THRESHOLD       = 6;
-const PARTIAL_THRESHOLD   = 5;
-const ENTRY_TFS           = ["1M", "3M", "5M"];
+const ZONE_TIMEFRAMES = ["1W", "1D", "4H", "1H", "30M", "15M"];
+const GOD_THRESHOLD   = 6;
+const PARTIAL_THRESHOLD = 5;
+const ENTRY_TFS       = ["1M", "3M", "5M"];
+const CRT_VALID_TFS   = ["1W", "1D", "4H"];
 
 const TG_CHANNEL_MAP = {
     "1M": () => TG_1M_ENTRIES,
@@ -59,6 +59,8 @@ let marketState  = {};
 let activityLog  = [];
 let tradeStats   = {};
 let appSettings  = { activeAlignments: [] };
+// crtState structure: { BTCUSDT: { "1W": [...], "1D": [...], "4H": [...] } }
+// Each TF holds an ARRAY of CRT entries to support multiple simultaneous CRTs
 let crtState     = {};
 let crtLog       = [];
 let clients      = [];
@@ -72,22 +74,18 @@ function broadcastAll(extras = {}) {
     const data = JSON.stringify({ marketState, activityLog, settings: appSettings, ...extras });
     clients.forEach(c => c.res.write(`data: ${data}\n\n`));
 }
-
 function broadcastSoundAlert(symbol, direction) {
     const data = JSON.stringify({ soundAlert: true, symbol, direction });
     clients.forEach(c => c.res.write(`data: ${data}\n\n`));
 }
-
 function broadcastStats() {
     const data = JSON.stringify({ tradeStats: buildEnrichedStats() });
     statsClients.forEach(c => c.res.write(`data: ${data}\n\n`));
 }
-
 function broadcastCRT() {
     const data = JSON.stringify({ crtState, crtLog });
     crtClients.forEach(c => c.res.write(`data: ${data}\n\n`));
 }
-
 function broadcastCRTSound(symbol, side) {
     const data = JSON.stringify({ crtSound: true, symbol, side });
     crtClients.forEach(c => c.res.write(`data: ${data}\n\n`));
@@ -106,7 +104,6 @@ async function sendTelegramTracked(chatId, message) {
         return { ok: true, messageId: data?.result?.message_id || null };
     } catch (err) { console.error("TG Send Error:", err); return { ok: false, messageId: null }; }
 }
-
 async function deleteTelegramMessage(chatId, messageId) {
     if (!TELEGRAM_TOKEN || !chatId || !messageId) return false;
     try {
@@ -115,7 +112,6 @@ async function deleteTelegramMessage(chatId, messageId) {
         return resp.ok;
     } catch (err) { console.error("TG Delete Error:", err); return false; }
 }
-
 async function sendTelegram(chatId, message) {
     if (!TELEGRAM_TOKEN || !chatId) return false;
     try {
@@ -154,6 +150,41 @@ async function pushCRTLog(symbol, side, message, extra = {}) {
 }
 
 // ══════════════════════════════════════════════
+// CRT ARRAY HELPERS
+// ══════════════════════════════════════════════
+function makeCRTId(sym, tf) {
+    return `${sym}_${tf}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+}
+
+// Ensure TF value is always an array
+function ensureCRTArray(sym, tf) {
+    if (!crtState[sym]) crtState[sym] = {};
+    if (!Array.isArray(crtState[sym][tf])) crtState[sym][tf] = [];
+    return crtState[sym][tf];
+}
+
+// Migrate old single-object format → array format on boot
+function migrateCRTState() {
+    let migrated = false;
+    for (const sym in crtState) {
+        for (const tf of CRT_VALID_TFS) {
+            const val = crtState[sym][tf];
+            if (val && !Array.isArray(val)) {
+                // Old single object → wrap in array
+                if (val.side) {
+                    val.id = val.id || makeCRTId(sym, tf);
+                    crtState[sym][tf] = [val];
+                } else {
+                    crtState[sym][tf] = [];
+                }
+                migrated = true;
+            }
+        }
+    }
+    return migrated;
+}
+
+// ══════════════════════════════════════════════
 // PRICE MATCH
 // ══════════════════════════════════════════════
 function priceMatch(a, b) {
@@ -161,7 +192,6 @@ function priceMatch(a, b) {
     if (isNaN(fa) || isNaN(fb)) return false;
     return Math.abs(fa - fb) <= Math.max(Math.abs(fa), Math.abs(fb)) * 0.0005;
 }
-
 function makeTradeId(symbol, tf) {
     return `${symbol}_${tf}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
 }
@@ -174,7 +204,6 @@ function getMatchedCombos(symbol, direction) {
     const tfs = marketState[symbol].timeframes || {};
     return ALIGNMENT_COMBOS.filter(c => c.tfs.every(tf => tfs[tf] === direction)).map(c => c.id);
 }
-
 function checkDirectionAlignment(symbol, direction) {
     if (!marketState[symbol]) return { aligned: false, reason: "Not tracked" };
     const tfs = marketState[symbol].timeframes || {};
@@ -185,13 +214,11 @@ function checkDirectionAlignment(symbol, direction) {
     const type = count >= GOD_THRESHOLD ? 'GOD' : 'PARTIAL';
     return { aligned: true, type, count, combos };
 }
-
 function checkWD4H1HAlignment(symbol, direction) {
     if (!marketState[symbol]) return false;
     const tfs = marketState[symbol].timeframes || {};
     return ['1W','1D','4H','1H'].every(tf => tfs[tf] === direction);
 }
-
 function checkCustomAlignment(symbol, direction) {
     if (!marketState[symbol] || appSettings.activeAlignments.length === 0) return false;
     const tfs = marketState[symbol].timeframes || {};
@@ -201,7 +228,6 @@ function checkCustomAlignment(symbol, direction) {
     }
     return false;
 }
-
 function recalculateAlignment(symbol) {
     if (!marketState[symbol]) return { dominantState:"NONE", bullCount:0, bearCount:0, alignCount:0, partialState:"NONE", partialCount:0 };
     const tfs = marketState[symbol].timeframes || {};
@@ -223,7 +249,6 @@ function recalculateAlignment(symbol) {
     marketState[symbol].partialCount = partialCount;
     return { dominantState, bullCount, bearCount, alignCount: Math.max(bullCount, bearCount), partialState, partialCount };
 }
-
 function getDirectionAlignCount(symbol, direction) {
     if (!marketState[symbol]) return 0;
     const tfs = marketState[symbol].timeframes || {};
@@ -240,7 +265,6 @@ function ensureStats(symbol, tf) {
     if (!tradeStats[symbol][tf]) tradeStats[symbol][tf] = { total_signals: 0, trades: [] };
     return tradeStats[symbol][tf];
 }
-
 function buildEnrichedStats() {
     const enriched = {};
     for (const sym in tradeStats) {
@@ -254,7 +278,6 @@ function buildEnrichedStats() {
     }
     return enriched;
 }
-
 async function saveStats() {
     await redisClient.set(REDIS_STATS_KEY, JSON.stringify(tradeStats));
 }
@@ -327,7 +350,6 @@ function normalizeTf(tf) {
     };
     return map[tf.toString().toUpperCase().trim()] || tf.toString().toUpperCase().trim();
 }
-
 function tfInfoString(sym) {
     const tfs = marketState[sym]?.timeframes || {};
     return ZONE_TIMEFRAMES.map(tf => `${tf}: ${tfs[tf] || '?'}`).join('\n');
@@ -385,17 +407,19 @@ const savedSettings = await redisClient.get(REDIS_SETTINGS_KEY);
 if (savedSettings) {
     appSettings = JSON.parse(savedSettings);
     console.log(`⚙️ Settings loaded: ${appSettings.activeAlignments.length} alignments active`);
-} else {
-    console.log('⚙️ No saved settings, using defaults');
-}
+} else { console.log('⚙️ No saved settings'); }
 
 const savedCRT = await redisClient.get(REDIS_CRT_KEY);
 if (savedCRT) {
     crtState = JSON.parse(savedCRT);
+    // Auto-migrate old single-object format to array format
+    const wasMigrated = migrateCRTState();
+    if (wasMigrated) {
+        await redisClient.set(REDIS_CRT_KEY, JSON.stringify(crtState));
+        console.log(`🔄 CRT state migrated to array format`);
+    }
     console.log(`🔄 CRT state loaded: ${Object.keys(crtState).length} symbols`);
-} else {
-    console.log('🆕 No CRT state found');
-}
+} else { console.log('🆕 No CRT state found'); }
 
 const savedCRTLog = await redisClient.get(REDIS_CRT_KEY + '_log');
 if (savedCRTLog) {
@@ -413,7 +437,6 @@ app.get('/api/crt-state', (req, res) => res.json({ crtState, crtLog }));
 app.get('/api/settings', (req, res) => {
     res.json({ settings: appSettings, alignmentCombos: ALIGNMENT_COMBOS });
 });
-
 app.post('/api/settings', async (req, res) => {
     const { activeAlignments } = req.body;
     if (!Array.isArray(activeAlignments)) return res.status(400).send("Invalid");
@@ -426,37 +449,23 @@ app.post('/api/settings', async (req, res) => {
 });
 
 app.get('/api/stream', (req, res) => {
-    res.setHeader('Content-Type','text/event-stream');
-    res.setHeader('Cache-Control','no-cache');
-    res.setHeader('Connection','keep-alive');
-    res.setHeader('X-Accel-Buffering','no');
-    res.flushHeaders();
-    const id = Date.now();
-    clients.push({ id, res });
+    res.setHeader('Content-Type','text/event-stream'); res.setHeader('Cache-Control','no-cache');
+    res.setHeader('Connection','keep-alive'); res.setHeader('X-Accel-Buffering','no'); res.flushHeaders();
+    const id = Date.now(); clients.push({ id, res });
     const ka = setInterval(() => res.write(': keepalive\n\n'), 15000);
     req.on('close', () => { clearInterval(ka); clients = clients.filter(c => c.id !== id); });
 });
-
 app.get('/api/stats-stream', (req, res) => {
-    res.setHeader('Content-Type','text/event-stream');
-    res.setHeader('Cache-Control','no-cache');
-    res.setHeader('Connection','keep-alive');
-    res.setHeader('X-Accel-Buffering','no');
-    res.flushHeaders();
-    const id = Date.now();
-    statsClients.push({ id, res });
+    res.setHeader('Content-Type','text/event-stream'); res.setHeader('Cache-Control','no-cache');
+    res.setHeader('Connection','keep-alive'); res.setHeader('X-Accel-Buffering','no'); res.flushHeaders();
+    const id = Date.now(); statsClients.push({ id, res });
     const ka = setInterval(() => res.write(': keepalive\n\n'), 15000);
     req.on('close', () => { clearInterval(ka); statsClients = statsClients.filter(c => c.id !== id); });
 });
-
 app.get('/api/crt-stream', (req, res) => {
-    res.setHeader('Content-Type','text/event-stream');
-    res.setHeader('Cache-Control','no-cache');
-    res.setHeader('Connection','keep-alive');
-    res.setHeader('X-Accel-Buffering','no');
-    res.flushHeaders();
-    const id = Date.now();
-    crtClients.push({ id, res });
+    res.setHeader('Content-Type','text/event-stream'); res.setHeader('Cache-Control','no-cache');
+    res.setHeader('Connection','keep-alive'); res.setHeader('X-Accel-Buffering','no'); res.flushHeaders();
+    const id = Date.now(); crtClients.push({ id, res });
     const ka = setInterval(() => res.write(': keepalive\n\n'), 15000);
     req.on('close', () => { clearInterval(ka); crtClients = crtClients.filter(c => c.id !== id); });
 });
@@ -469,39 +478,25 @@ app.post('/api/delete', async (req, res) => {
     delete marketState[sym];
     await redisClient.set(REDIS_STATE_KEY, JSON.stringify(marketState));
     await pushLogEvent(sym, 'SYSTEM', '🗑️ Purged');
-    broadcastAll();
-    res.send("Purged");
+    broadcastAll(); res.send("Purged");
 });
-
 app.post('/api/delete-stats', async (req, res) => {
     const { symbol } = req.body;
     if (!symbol) return res.status(400).send("Invalid");
     const sym = symbol.toUpperCase().trim();
     if (sym === "ALL") { tradeStats = {}; }
-    else {
-        if (!tradeStats[sym]) return res.status(404).send("Not found");
-        delete tradeStats[sym];
-    }
-    await saveStats();
-    broadcastStats();
-    res.send("Cleared");
+    else { if (!tradeStats[sym]) return res.status(404).send("Not found"); delete tradeStats[sym]; }
+    await saveStats(); broadcastStats(); res.send("Cleared");
 });
-
 app.post('/api/delete-crt', async (req, res) => {
     const { symbol } = req.body;
     if (!symbol) return res.status(400).send("Invalid");
     const sym = symbol.toUpperCase().trim();
-    if (sym === "ALL") {
-        crtState = {};
-        crtLog = [];
-    } else {
-        if (crtState[sym]) delete crtState[sym];
-        crtLog = crtLog.filter(e => e.symbol !== sym);
-    }
+    if (sym === "ALL") { crtState = {}; crtLog = []; }
+    else { if (crtState[sym]) delete crtState[sym]; crtLog = crtLog.filter(e => e.symbol !== sym); }
     await redisClient.set(REDIS_CRT_KEY, JSON.stringify(crtState));
     await redisClient.set(REDIS_CRT_KEY + '_log', JSON.stringify(crtLog));
-    broadcastCRT();
-    res.send("Cleared");
+    broadcastCRT(); res.send("Cleared");
 });
 
 // ══════════════════════════════════════════════
@@ -522,26 +517,18 @@ app.post('/webhook', async (req, res) => {
         const sym   = (payload.symbol || '').toUpperCase().trim();
         const tf    = normalizeTf(payload.tf);
         const state = (payload.state || '').toUpperCase().trim();
-
         if (!sym || !tf || !state) return res.status(400).send("Invalid Storyline");
         if (!ZONE_TIMEFRAMES.includes(tf)) return res.status(200).send("OK");
-
         console.log(`\n[STORYLINE] ${sym} | ${tf} → ${state}`);
-
         if (!marketState[sym]) {
             const defaultTfs = {};
             ZONE_TIMEFRAMES.forEach(t => defaultTfs[t] = "NONE");
             marketState[sym] = { timeframes: defaultTfs, lastAlertedState: "NONE", lastGodModeStartTime: null, alignCount: 0, partialState: "NONE", partialCount: 0 };
         }
-        if (!marketState[sym].timeframes) {
-            marketState[sym].timeframes = {};
-            ZONE_TIMEFRAMES.forEach(t => marketState[sym].timeframes[t] = "NONE");
-        }
-
+        if (!marketState[sym].timeframes) { marketState[sym].timeframes = {}; ZONE_TIMEFRAMES.forEach(t => marketState[sym].timeframes[t] = "NONE"); }
         marketState[sym].timeframes[tf] = state;
         const prev = marketState[sym].lastAlertedState;
         const { dominantState, partialState, partialCount, alignCount } = recalculateAlignment(sym);
-
         if (dominantState !== "NONE" && dominantState !== prev) {
             marketState[sym].lastAlertedState = dominantState;
             marketState[sym].lastGodModeStartTime = Date.now();
@@ -549,13 +536,11 @@ app.post('/webhook', async (req, res) => {
             await sendTelegram(TELEGRAM_STORYLINE_CHAT_ID, `<b>${emoji} GOD-MODE: ${sym}</b>\n\n<b>Alignment:</b> ${dominantState} (6/6)\n${tfInfoString(sym)}\n\n✅ All 6 timeframes aligned!`);
             await pushLogEvent(sym, dominantState, `GOD-MODE ON: ${dominantState} (6/6)`);
         }
-
         if (dominantState === "NONE" && prev !== "NONE") {
             marketState[sym].lastAlertedState = "NONE";
             await sendTelegram(TELEGRAM_STORYLINE_CHAT_ID, `<b>⚠️ ALIGNMENT LOST: ${sym}</b>\n\nWas: ${prev} (6/6)\nNow: ${partialState !== "NONE" ? partialState + ` (${partialCount}/6)` : `${alignCount}/6`}\n${tfInfoString(sym)}`);
             await pushLogEvent(sym, 'NONE', `Alignment Lost: was ${prev} (6/6)`);
         }
-
         if (dominantState === "NONE" && partialState !== "NONE") {
             const prevPartial = marketState[sym]._lastPartialState || "NONE";
             if (prevPartial !== partialState || (prev !== "NONE" && dominantState === "NONE")) {
@@ -565,7 +550,6 @@ app.post('/webhook', async (req, res) => {
             }
         }
         marketState[sym]._lastPartialState = partialState;
-
         await invalidatePendingTrades(sym);
         await redisClient.set(REDIS_STATE_KEY, JSON.stringify(marketState));
         broadcastAll();
@@ -579,60 +563,30 @@ app.post('/webhook', async (req, res) => {
         const sym       = (payload.symbol    || '').toUpperCase().trim();
         const direction = (payload.direction || '').toUpperCase().trim();
         const chartTf   = normalizeTf(payload.chart_tf);
-
-        if (!sym || !direction) {
-            console.log(`[BREAKOUT] Invalid payload`);
-            return res.status(400).send("Invalid Breakout Payload");
-        }
-
+        if (!sym || !direction) return res.status(400).send("Invalid Breakout Payload");
         console.log(`\n[BREAKOUT] ${sym} | ${direction} | Chart TF: ${chartTf}`);
-
         const align = checkDirectionAlignment(sym, direction);
-
-        if (!align.aligned) {
-            console.log(`  ❌ BREAKOUT IGNORED: ${sym} ${direction} | ${align.reason}`);
-            return res.status(200).send("OK — Not aligned");
-        }
-
-        console.log(`  ✅ BREAKOUT ALIGNED [${align.type}] (${align.count}/6)`);
-
+        if (!align.aligned) { console.log(`  ❌ BREAKOUT IGNORED: ${align.reason}`); return res.status(200).send("OK — Not aligned"); }
         const dirEmoji   = direction === "BULLISH" ? "🚀 🐂" : "🩸 🐻";
         const alignEmoji = align.type === 'GOD' ? '✅' : '⚡';
         const alignLabel = align.type === 'GOD' ? `GOD-MODE (6/6)` : `PARTIAL (${align.count}/6)`;
         const chartTfStr = chartTf || payload.chart_tf || '?';
-
-        let tgMsg = `<b>${dirEmoji} BREAKOUT: ${sym}</b>\n\n`;
-        tgMsg += `<b>Direction:</b> ${direction}\n`;
-        tgMsg += `<b>Chart TF:</b> ${chartTfStr}\n`;
-        tgMsg += `\n${alignEmoji} <b>${alignLabel}</b>\n`;
-        tgMsg += `${tfInfoString(sym)}`;
-
+        let tgMsg = `<b>${dirEmoji} BREAKOUT: ${sym}</b>\n\n<b>Direction:</b> ${direction}\n<b>Chart TF:</b> ${chartTfStr}\n\n${alignEmoji} <b>${alignLabel}</b>\n${tfInfoString(sym)}`;
         const sentChannels = [];
-
-        if (align.count === PARTIAL_THRESHOLD && align.type === 'PARTIAL') {
-            if (TG_BREAKOUT_5OF6) { await sendTelegram(TG_BREAKOUT_5OF6, tgMsg); sentChannels.push('5/6'); }
-        }
-        if (align.type === 'GOD') {
-            if (TG_BREAKOUT_6OF6) { await sendTelegram(TG_BREAKOUT_6OF6, tgMsg); sentChannels.push('6/6'); }
-        }
-        if (checkWD4H1HAlignment(sym, direction)) {
-            if (TG_BREAKOUT_WD4H1H) { await sendTelegram(TG_BREAKOUT_WD4H1H, tgMsg); sentChannels.push('W+D+4H+1H'); }
-        }
-        if (checkCustomAlignment(sym, direction)) {
-            if (TG_CUSTOM_ALIGNMENT) { await sendTelegram(TG_CUSTOM_ALIGNMENT, tgMsg); sentChannels.push('CUSTOM'); }
-        }
-
+        if (align.count === PARTIAL_THRESHOLD && align.type === 'PARTIAL' && TG_BREAKOUT_5OF6) { await sendTelegram(TG_BREAKOUT_5OF6, tgMsg); sentChannels.push('5/6'); }
+        if (align.type === 'GOD' && TG_BREAKOUT_6OF6) { await sendTelegram(TG_BREAKOUT_6OF6, tgMsg); sentChannels.push('6/6'); }
+        if (checkWD4H1HAlignment(sym, direction) && TG_BREAKOUT_WD4H1H) { await sendTelegram(TG_BREAKOUT_WD4H1H, tgMsg); sentChannels.push('W+D+4H+1H'); }
+        if (checkCustomAlignment(sym, direction) && TG_CUSTOM_ALIGNMENT) { await sendTelegram(TG_CUSTOM_ALIGNMENT, tgMsg); sentChannels.push('CUSTOM'); }
         const channelStr = sentChannels.length > 0 ? ` → [${sentChannels.join(', ')}]` : '';
         await pushLogEvent(sym, direction, `💥 BREAKOUT: ${direction} | Chart:${chartTfStr} | ${alignLabel}${channelStr}`, { logAction: 'BREAKOUT', direction, chart_tf: chartTfStr });
-
-        broadcastAll();
-        broadcastSoundAlert(sym, direction);
-        console.log(`  ✅ Breakout processed: ${sym} ${direction} | Channels: ${sentChannels.join(', ') || 'none'}`);
+        broadcastAll(); broadcastSoundAlert(sym, direction);
+        console.log(`  ✅ Breakout: ${sym} ${direction} | Channels: ${sentChannels.join(', ') || 'none'}`);
         return res.status(200).send("OK");
     }
 
     // ════════════════════════════════════════
-    // CRT ALERTS — CRT / CRT_TARGET / CRT_INVALID
+    // CRT ALERTS — ARRAY-BASED per TF
+    // Supports multiple simultaneous CRTs per TF per symbol
     // ════════════════════════════════════════
     if (isCRT) {
         const sym  = (payload.coin || '').toUpperCase().trim();
@@ -647,80 +601,75 @@ app.post('/webhook', async (req, res) => {
             console.log(`[CRT] Invalid payload — missing symbol/tf/side`);
             return res.status(400).send("Invalid CRT Payload");
         }
-
-        const validCRTTFs = ['1W', '1D', '4H'];
-        if (!validCRTTFs.includes(tf)) {
+        if (!CRT_VALID_TFS.includes(tf)) {
             console.log(`[CRT] ${sym} | TF:${tf} — IGNORED (only 1W/1D/4H)`);
             return res.status(200).send("OK — TF not accepted");
         }
 
         console.log(`\n[${payload.kind}] ${sym} | ${tf} | ${side} | Rej:${rej} BO:${bo} Ext:${ext} Tgt:${tgt}`);
 
-        if (!crtState[sym]) crtState[sym] = {};
-
+        // Get or create the array for this TF
+        const arr = ensureCRTArray(sym, tf);
         const dirEmoji = side === 'BULLISH' ? '🐂' : '🐻';
 
-        // ── CRT FORMED → ACTIVE ──
+        // ── CRT FORMED → push new ACTIVE entry to array ──
         if (payload.kind === 'CRT') {
-            crtState[sym][tf] = {
+            const newEntry = {
+                id:        makeCRTId(sym, tf),
                 side,
-                rej,
-                bo,
-                ext,
-                tgt,
+                rej, bo, ext, tgt,
                 status:    'ACTIVE',
                 timestamp: Date.now(),
                 tp_time:   null,
                 inv_time:  null
             };
+            arr.push(newEntry);
+            // Cap at 20 entries per TF to prevent unbounded growth
+            if (arr.length > 20) crtState[sym][tf] = arr.slice(-20);
+
             const logMsg = `${dirEmoji} ${tf} CRT FORMED: ${side} | Rej:${rej} BO:${bo} Tgt:${tgt}`;
             await pushCRTLog(sym, side, logMsg, { tf, rej, bo, ext, tgt, action: 'CRT_FORMED' });
-            console.log(`  ✅ CRT ACTIVE: ${sym} ${tf} ${side}`);
+            console.log(`  ✅ CRT ACTIVE: ${sym} ${tf} ${side} (now ${crtState[sym][tf].length} in ${tf})`);
+            // Play sound only on new CRT formed
+            broadcastCRTSound(sym, side);
         }
 
-        // ── CRT_TARGET → TP_HIT ──
+        // ── CRT_TARGET → find oldest ACTIVE with same side → TP_HIT (FIFO) ──
         if (payload.kind === 'CRT_TARGET') {
-            if (crtState[sym][tf]) {
-                crtState[sym][tf].status  = 'TP_HIT';
-                crtState[sym][tf].tp_time = Date.now();
-                // Update levels in case they changed
-                crtState[sym][tf].rej = rej;
-                crtState[sym][tf].bo  = bo;
-                crtState[sym][tf].ext = ext;
-                crtState[sym][tf].tgt = tgt;
+            const found = arr.find(c => c.status === 'ACTIVE' && c.side === side);
+            if (found) {
+                found.status  = 'TP_HIT';
+                found.tp_time = Date.now();
+                found.rej = rej; found.bo = bo; found.ext = ext; found.tgt = tgt;
+                console.log(`  🎯 CRT TP HIT: ${sym} ${tf} ${side} | ID:${found.id}`);
             } else {
-                crtState[sym][tf] = { side, rej, bo, ext, tgt, status: 'TP_HIT', timestamp: Date.now(), tp_time: Date.now(), inv_time: null };
+                // No matching ACTIVE → create as TP_HIT
+                arr.push({ id: makeCRTId(sym, tf), side, rej, bo, ext, tgt, status: 'TP_HIT', timestamp: Date.now(), tp_time: Date.now(), inv_time: null });
+                if (arr.length > 20) crtState[sym][tf] = arr.slice(-20);
+                console.log(`  🎯 CRT TP HIT (no active found): ${sym} ${tf} ${side}`);
             }
-            const logMsg = `🎯 ${tf} CRT TARGET HIT: ${side} | Tgt:${tgt}`;
-            await pushCRTLog(sym, side, logMsg, { tf, tgt, action: 'CRT_TARGET' });
-            console.log(`  🎯 CRT TP HIT: ${sym} ${tf} ${side}`);
+            await pushCRTLog(sym, side, `🎯 ${tf} CRT TARGET HIT: ${side} | Tgt:${tgt}`, { tf, tgt, action: 'CRT_TARGET' });
         }
 
-        // ── CRT_INVALID → INVALID ──
+        // ── CRT_INVALID → find oldest ACTIVE with same side → INVALID (FIFO) ──
         if (payload.kind === 'CRT_INVALID') {
-            if (crtState[sym][tf]) {
-                crtState[sym][tf].status   = 'INVALID';
-                crtState[sym][tf].inv_time = Date.now();
-                crtState[sym][tf].rej = rej;
-                crtState[sym][tf].bo  = bo;
-                crtState[sym][tf].ext = ext;
-                crtState[sym][tf].tgt = tgt;
+            const found = arr.find(c => c.status === 'ACTIVE' && c.side === side);
+            if (found) {
+                found.status   = 'INVALID';
+                found.inv_time = Date.now();
+                found.rej = rej; found.bo = bo; found.ext = ext; found.tgt = tgt;
+                console.log(`  ❌ CRT INVALID: ${sym} ${tf} ${side} | ID:${found.id}`);
             } else {
-                crtState[sym][tf] = { side, rej, bo, ext, tgt, status: 'INVALID', timestamp: Date.now(), tp_time: null, inv_time: Date.now() };
+                // No matching ACTIVE → create as INVALID
+                arr.push({ id: makeCRTId(sym, tf), side, rej, bo, ext, tgt, status: 'INVALID', timestamp: Date.now(), tp_time: null, inv_time: Date.now() });
+                if (arr.length > 20) crtState[sym][tf] = arr.slice(-20);
+                console.log(`  ❌ CRT INVALID (no active found): ${sym} ${tf} ${side}`);
             }
-            const logMsg = `❌ ${tf} CRT INVALIDATED: ${side} | Ext:${ext}`;
-            await pushCRTLog(sym, side, logMsg, { tf, ext, action: 'CRT_INVALID' });
-            console.log(`  ❌ CRT INVALID: ${sym} ${tf} ${side}`);
+            await pushCRTLog(sym, side, `❌ ${tf} CRT INVALIDATED: ${side} | Ext:${ext}`, { tf, ext, action: 'CRT_INVALID' });
         }
 
         await redisClient.set(REDIS_CRT_KEY, JSON.stringify(crtState));
         broadcastCRT();
-
-        // Only play sound on new CRT formed
-        if (payload.kind === 'CRT') {
-            broadcastCRTSound(sym, side);
-        }
-
         return res.status(200).send("OK");
     }
 
@@ -736,37 +685,24 @@ app.post('/webhook', async (req, res) => {
         const rr        = payload.rr;
         const action    = (payload.action || '').toUpperCase().trim();
         const entryTf   = normalizeTf(payload.chart_tf);
-
         if (!sym || !direction || entry === undefined) return res.status(400).send("Invalid Pine Payload");
-
-        if (!ENTRY_TFS.includes(entryTf)) {
-            console.log(`[PINE ${action}] ${sym} | TF:${entryTf} — IGNORED`);
-            return res.status(200).send("OK — TF not accepted");
-        }
-
-        console.log(`\n[PINE ${action}] ${sym} | ${direction} | TF:${entryTf} | Entry:${entry} | SL:${sl} | TP:${tp}`);
+        if (!ENTRY_TFS.includes(entryTf)) { console.log(`[PINE ${action}] ${sym} | TF:${entryTf} — IGNORED`); return res.status(200).send("OK — TF not accepted"); }
+        console.log(`\n[PINE ${action}] ${sym} | ${direction} | TF:${entryTf} | Entry:${entry}`);
 
         if (action === "OB_FORMED") {
             const align = checkDirectionAlignment(sym, direction);
-            if (!align.aligned) {
-                console.log(`  ❌ REJECTED: ${sym} ${direction} ${entryTf} | ${align.reason}`);
-                return res.status(200).send("OK — Not aligned");
-            }
-
+            if (!align.aligned) { console.log(`  ❌ REJECTED: ${align.reason}`); return res.status(200).send("OK — Not aligned"); }
             const stats = ensureStats(sym, entryTf);
             stats.total_signals++;
-
             const trade = {
                 id: makeTradeId(sym, entryTf), direction,
                 entry: parseFloat(entry)||entry, sl: parseFloat(sl)||sl, tp: parseFloat(tp)||tp, rr: parseFloat(rr)||rr,
                 alignment: align.type, align_combos: align.combos, align_count: align.count,
                 status: 'PENDING', signal_time: Date.now(), entry_time: null, result_time: null, entry_tf: entryTf,
-                telegram_chat_id: null, telegram_message_id: null, telegram_deleted: false,
-                cancelled_time: null, cancelled_reason: null
+                telegram_chat_id: null, telegram_message_id: null, telegram_deleted: false, cancelled_time: null, cancelled_reason: null
             };
             stats.trades.push(trade);
             if (stats.trades.length > 500) stats.trades = stats.trades.slice(-500);
-
             const chatId = TG_CHANNEL_MAP[entryTf]?.();
             let soundTriggered = false;
             if (chatId) {
@@ -779,7 +715,6 @@ app.post('/webhook', async (req, res) => {
                 const sent = await sendTelegramTracked(chatId, msg);
                 if (sent.ok) { soundTriggered = true; trade.telegram_chat_id = chatId; trade.telegram_message_id = sent.messageId; }
             }
-
             await saveStats(); broadcastStats();
             if (soundTriggered) broadcastSoundAlert(sym, direction);
             await pushLogEvent(sym, direction, `📡 OB SIGNAL: ${direction} ${entryTf} @ ${entry} [${align.type} ${align.count}/6]`, { entry_tf: entryTf, direction, logAction: 'SIGNAL' });
@@ -791,80 +726,39 @@ app.post('/webhook', async (req, res) => {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) return res.status(200).send("OK");
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
-            if (found) {
-                found.trade.status = 'ACTIVE'; found.trade.entry_time = Date.now();
-                await saveStats(); broadcastStats();
-                await pushLogEvent(sym, direction, `📥 ENTRY FILLED: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'ENTRY_FILLED' });
-                broadcastAll();
-            }
+            if (found) { found.trade.status = 'ACTIVE'; found.trade.entry_time = Date.now(); await saveStats(); broadcastStats(); await pushLogEvent(sym, direction, `📥 ENTRY FILLED: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'ENTRY_FILLED' }); broadcastAll(); }
             return res.status(200).send("OK");
         }
-
         if (action === "ENTRY_AND_SL_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) return res.status(200).send("OK");
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
-            if (found) {
-                found.trade.status = 'SL_HIT'; found.trade.entry_time = Date.now(); found.trade.result_time = Date.now();
-                await saveStats(); broadcastStats();
-                await pushLogEvent(sym, 'BEARISH', `💀 ENTRY+SL HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_HIT' });
-                broadcastAll();
-            }
+            if (found) { found.trade.status = 'SL_HIT'; found.trade.entry_time = Date.now(); found.trade.result_time = Date.now(); await saveStats(); broadcastStats(); await pushLogEvent(sym, 'BEARISH', `💀 ENTRY+SL HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_HIT' }); broadcastAll(); }
             return res.status(200).send("OK");
         }
-
         if (action === "ENTRY_AND_TP_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) return res.status(200).send("OK");
             const found = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
-            if (found) {
-                found.trade.status = 'TP_HIT'; found.trade.entry_time = Date.now(); found.trade.result_time = Date.now();
-                await saveStats(); broadcastStats();
-                await pushLogEvent(sym, 'BULLISH', `🎯 ENTRY+TP HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_HIT' });
-                broadcastAll();
-            }
+            if (found) { found.trade.status = 'TP_HIT'; found.trade.entry_time = Date.now(); found.trade.result_time = Date.now(); await saveStats(); broadcastStats(); await pushLogEvent(sym, 'BULLISH', `🎯 ENTRY+TP HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_HIT' }); broadcastAll(); }
             return res.status(200).send("OK");
         }
-
         if (action === "TP_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) return res.status(200).send("OK");
             const foundActive = findBestTrade(stats, { direction, entry, allowedStatuses: ['ACTIVE'] });
-            if (foundActive) {
-                foundActive.trade.status = 'TP_HIT'; foundActive.trade.result_time = Date.now();
-                await saveStats(); broadcastStats();
-                await pushLogEvent(sym, 'BULLISH', `🎯 TP HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_HIT' });
-                broadcastAll();
-                return res.status(200).send("OK");
-            }
+            if (foundActive) { foundActive.trade.status = 'TP_HIT'; foundActive.trade.result_time = Date.now(); await saveStats(); broadcastStats(); await pushLogEvent(sym, 'BULLISH', `🎯 TP HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_HIT' }); broadcastAll(); return res.status(200).send("OK"); }
             const foundPending = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
-            if (foundPending) {
-                foundPending.trade.status = 'TP_NO_ENTRY'; foundPending.trade.result_time = Date.now();
-                await saveStats(); broadcastStats();
-                await pushLogEvent(sym, 'NONE', `⏭️ TP without entry: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_NO_ENTRY' });
-                broadcastAll();
-            }
+            if (foundPending) { foundPending.trade.status = 'TP_NO_ENTRY'; foundPending.trade.result_time = Date.now(); await saveStats(); broadcastStats(); await pushLogEvent(sym, 'NONE', `⏭️ TP without entry: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'TP_NO_ENTRY' }); broadcastAll(); }
             return res.status(200).send("OK");
         }
-
         if (action === "SL_HIT") {
             const stats = tradeStats[sym]?.[entryTf];
             if (!stats) return res.status(200).send("OK");
             const foundActive = findBestTrade(stats, { direction, entry, allowedStatuses: ['ACTIVE'] });
-            if (foundActive) {
-                foundActive.trade.status = 'SL_HIT'; foundActive.trade.result_time = Date.now();
-                await saveStats(); broadcastStats();
-                await pushLogEvent(sym, 'BEARISH', `💀 SL HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_HIT' });
-                broadcastAll();
-                return res.status(200).send("OK");
-            }
+            if (foundActive) { foundActive.trade.status = 'SL_HIT'; foundActive.trade.result_time = Date.now(); await saveStats(); broadcastStats(); await pushLogEvent(sym, 'BEARISH', `💀 SL HIT: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_HIT' }); broadcastAll(); return res.status(200).send("OK"); }
             const foundPending = findBestTrade(stats, { direction, entry, allowedStatuses: ['PENDING'] });
-            if (foundPending) {
-                foundPending.trade.status = 'SL_NO_ENTRY'; foundPending.trade.result_time = Date.now();
-                await saveStats(); broadcastStats();
-                await pushLogEvent(sym, 'NONE', `⏭️ SL without entry: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_NO_ENTRY' });
-                broadcastAll();
-            }
+            if (foundPending) { foundPending.trade.status = 'SL_NO_ENTRY'; foundPending.trade.result_time = Date.now(); await saveStats(); broadcastStats(); await pushLogEvent(sym, 'NONE', `⏭️ SL without entry: ${direction} ${entryTf} @ ${entry}`, { entry_tf: entryTf, direction, logAction: 'SL_NO_ENTRY' }); broadcastAll(); }
             return res.status(200).send("OK");
         }
 
@@ -886,7 +780,6 @@ app.get('/api/filtered-state/wdh', (req, res) => {
     }
     res.json({ marketState: filtered, activityLog });
 });
-
 app.get('/api/filtered-state/dh1h', (req, res) => {
     const filtered = {};
     for (const sym in marketState) {
