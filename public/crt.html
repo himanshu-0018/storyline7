@@ -64,9 +64,9 @@
         .coin-section { flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(245,158,11,0.3) transparent; }
         .coin-section::-webkit-scrollbar { width:4px; }
         .coin-section::-webkit-scrollbar-thumb { background:rgba(245,158,11,0.3);border-radius:4px; }
-        .coin-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px; }
+        .coin-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px; }
 
-        /* ── COIN CARDS (storyline style) ── */
+        /* ── COIN CARDS ── */
         .coin-card { border-radius:16px;padding:16px;position:relative;overflow:hidden;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:default; }
         .coin-card::before { content:'';position:absolute;inset:0;border-radius:16px;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none; }
         .coin-card:hover { transform:translateY(-4px) scale(1.01); }
@@ -87,19 +87,28 @@
         .card-badge-mixed { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(167,139,250,0.3),rgba(196,181,253,0.15));border:1px solid rgba(167,139,250,0.4);color:#c4b5fd; }
         .card-badge-idle { font-family:'JetBrains Mono',monospace;font-size:0.55rem;font-weight:700;letter-spacing:0.1em;padding:3px 8px;border-radius:6px;background:rgba(71,85,105,0.3);border:1px solid rgba(71,85,105,0.4);color:#64748b; }
 
-        /* ── TF ROW (3 columns like storyline's 6) ── */
-        .tf-row { display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:10px; }
-        .tf-cell { padding:8px 4px;border-radius:9px;font-family:'JetBrains Mono',monospace;font-size:0.50rem;text-align:center; }
-        .tf-cell-bull { background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.25); }
-        .tf-cell-bear { background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.25); }
-        .tf-cell-none { background:rgba(15,23,42,0.5);border:1px solid rgba(71,85,105,0.2); }
+        /* ── TF SECTIONS with multiple CRT entries per TF ── */
+        .tf-sections { margin-top:10px;display:flex;flex-direction:column;gap:4px; }
+
+        /* TF label header */
+        .tf-label-header { font-family:'JetBrains Mono',monospace;font-size:0.48rem;font-weight:700;color:rgba(148,163,184,0.4);text-transform:uppercase;letter-spacing:0.1em;padding:2px 0 1px 2px; }
+
+        /* Each CRT entry row */
+        .crt-entry-row { display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:7px;font-family:'JetBrains Mono',monospace; }
+        .crt-row-bull { background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.04));border:1px solid rgba(16,185,129,0.2); }
+        .crt-row-bear { background:linear-gradient(135deg,rgba(239,68,68,0.12),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.2); }
+        .crt-row-none { background:rgba(15,23,42,0.4);border:1px solid rgba(71,85,105,0.15); }
+
+        .crt-side-emoji { font-size:0.68rem;flex-shrink:0; }
+        .crt-entry-time { font-size:0.5rem;font-weight:600;color:rgba(203,213,225,0.75);margin-left:auto;white-space:nowrap;flex-shrink:0; }
+        /* Small ×N badge when multiple CRTs in same TF */
+        .crt-multi-badge { font-size:0.38rem;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;flex-shrink:0; }
 
         /* ── STATUS BADGES ── */
-        .status-badge { font-family:'JetBrains Mono',monospace;font-size:0.42rem;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.04em;display:inline-block;margin-top:3px; }
+        .status-badge { font-family:'JetBrains Mono',monospace;font-size:0.42rem;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.04em;white-space:nowrap;flex-shrink:0; }
         .status-active { background:rgba(14,165,233,0.2);border:1px solid rgba(14,165,233,0.4);color:#38bdf8; }
         .status-tp { background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#34d399; }
         .status-invalid { background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171; }
-        .status-none { background:rgba(71,85,105,0.15);border:1px solid rgba(71,85,105,0.3);color:#475569; }
 
         /* ── ALIGN BAR ── */
         .align-bar { margin-top:8px;padding:6px 10px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.55rem;display:flex;align-items:center;gap:8px; }
@@ -115,7 +124,6 @@
         .feed-body { flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(245,158,11,0.3) transparent; }
         .feed-body::-webkit-scrollbar { width:4px; }
         .feed-body::-webkit-scrollbar-thumb { background:rgba(245,158,11,0.3);border-radius:4px; }
-        .feed-count { font-family:'JetBrains Mono',monospace;font-size:0.5rem;color:rgba(251,191,36,0.5); }
 
         .log-card { padding:10px 12px;border-radius:10px;animation:logSlide 0.3s ease-out; }
         .log-card-bull { background:linear-gradient(135deg,rgba(5,46,22,0.8),rgba(6,78,59,0.4));border:1px solid rgba(16,185,129,0.25);border-left:3px solid #10b981; }
@@ -155,7 +163,7 @@
             <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,#f59e0b,#d97706,#b45309);display:flex;align-items:center;justify-content:center;font-size:1.3rem;animation:logoGlow 4s ease-in-out infinite;">🔄</div>
             <div>
                 <div class="brand-name">CRT DASHBOARD</div>
-                <div class="brand-sub">CANDLE RANGE THEORY · 1W · 1D · 4H · LIVE LIFECYCLE</div>
+                <div class="brand-sub">CANDLE RANGE THEORY · 1W · 1D · 4H · MULTI-CRT PER TF</div>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -185,7 +193,7 @@
         <span id="tpPill" class="stats-pill sp-tp">🎯 0 TP HIT</span>
         <span id="invPill" class="stats-pill sp-inv">❌ 0 INVALID</span>
         <div class="divider-v"></div>
-        <span id="totalPill" class="stats-pill sp-total">🔄 0 TRACKED</span>
+        <span id="totalPill" class="stats-pill sp-total">🔄 0 CRTs</span>
     </div>
 
     <div class="main-layout">
@@ -236,77 +244,79 @@
             return old ? d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+t : t;
         }
 
+        // ── Safely get TF entries as array (handles old single-object + new array format) ──
+        function getTFEntries(sym, tf) {
+            const val = crtState[sym]?.[tf];
+            if (!val) return [];
+            if (Array.isArray(val)) return val;
+            if (val.side) return [val]; // legacy single object
+            return [];
+        }
+
+        // ── Get all CRT entries for a symbol as flat array ──
+        function getAllEntries(sym) {
+            const all = [];
+            CRT_TFS.forEach(tf => getTFEntries(sym, tf).forEach(e => all.push({ ...e, tf })));
+            return all;
+        }
+
         function getCardType(sym) {
-            const data = crtState[sym];
-            if (!data) return 'idle';
-            const sides = CRT_TFS.map(tf => data[tf]?.side).filter(s => s);
+            const entries = getAllEntries(sym);
+            if (entries.length === 0) return 'idle';
+            const sides = entries.map(e => e.side).filter(Boolean);
             if (sides.length === 0) return 'idle';
             if (sides.every(s => s === 'BULLISH')) return 'bull';
             if (sides.every(s => s === 'BEARISH')) return 'bear';
             return 'mixed';
         }
 
-        function getAlignBarInfo(sym) {
-            const data = crtState[sym];
-            if (!data) return { cls: 'align-bar-none', txt: '— No CRT signals' };
-            const active = CRT_TFS.filter(tf => data[tf]?.status === 'ACTIVE').length;
-            const tp = CRT_TFS.filter(tf => data[tf]?.status === 'TP_HIT').length;
-            const inv = CRT_TFS.filter(tf => data[tf]?.status === 'INVALID').length;
-            const total = active + tp + inv;
-            if (total === 0) return { cls: 'align-bar-none', txt: '— No CRT signals' };
-
-            const type = getCardType(sym);
-            const parts = [];
-            if (active > 0) parts.push(`🔵 ${active} Active`);
-            if (tp > 0) parts.push(`🎯 ${tp} TP`);
-            if (inv > 0) parts.push(`❌ ${inv} Inv`);
-
-            if (type === 'bull') return { cls: 'align-bar-bull', txt: `🐂 ${parts.join(' · ')}` };
-            if (type === 'bear') return { cls: 'align-bar-bear', txt: `🐻 ${parts.join(' · ')}` };
-            if (type === 'mixed') return { cls: 'align-bar-mixed', txt: `🔀 ${parts.join(' · ')}` };
-            return { cls: 'align-bar-none', txt: parts.join(' · ') };
-        }
-
-        function tfCellCls(d) {
-            if (!d || !d.side) return 'tf-cell-none';
-            return d.side === 'BULLISH' ? 'tf-cell-bull' : 'tf-cell-bear';
-        }
-
-        function tfSideEmoji(d) {
-            if (!d || !d.side) return '—';
-            return d.side === 'BULLISH' ? '🐂' : '🐻';
-        }
-
         function statusBadgeHTML(status) {
             if (status === 'ACTIVE')  return '<span class="status-badge status-active">ACTIVE</span>';
-            if (status === 'TP_HIT')  return '<span class="status-badge status-tp">🎯 TP HIT</span>';
-            if (status === 'INVALID') return '<span class="status-badge status-invalid">❌ INVALID</span>';
-            return '<span class="status-badge status-none">—</span>';
+            if (status === 'TP_HIT')  return '<span class="status-badge status-tp">🎯 TP</span>';
+            if (status === 'INVALID') return '<span class="status-badge status-invalid">❌ INV</span>';
+            return '';
+        }
+
+        function rowCls(side) {
+            if (side === 'BULLISH') return 'crt-row-bull';
+            if (side === 'BEARISH') return 'crt-row-bear';
+            return 'crt-row-none';
+        }
+
+        function sideEmoji(side) {
+            if (side === 'BULLISH') return '🐂';
+            if (side === 'BEARISH') return '🐻';
+            return '—';
         }
 
         function render() {
             const grid = document.getElementById('coinGrid');
-            const syms = Object.keys(crtState).sort((a, b) => {
-                const pri = { bull:3, bear:3, mixed:2, idle:0 };
-                const pa = pri[getCardType(a)] || 0;
-                const pb = pri[getCardType(b)] || 0;
-                if (pa !== pb) return pb - pa;
-                const ta = Math.max(...CRT_TFS.map(tf => crtState[a]?.[tf]?.timestamp || 0));
-                const tb = Math.max(...CRT_TFS.map(tf => crtState[b]?.[tf]?.timestamp || 0));
-                return tb - ta;
-            });
 
-            // Stats
-            let totalBull=0, totalBear=0, totalActive=0, totalTP=0, totalInv=0;
+            // Only show symbols that have at least one CRT entry
+            const syms = Object.keys(crtState)
+                .filter(sym => getAllEntries(sym).length > 0)
+                .sort((a, b) => {
+                    const pri = { bull:3, bear:3, mixed:2, idle:0 };
+                    const pa = pri[getCardType(a)] || 0;
+                    const pb = pri[getCardType(b)] || 0;
+                    if (pa !== pb) return pb - pa;
+                    const allA = getAllEntries(a);
+                    const allB = getAllEntries(b);
+                    const ta = Math.max(...allA.map(e => e.timestamp || 0), 0);
+                    const tb = Math.max(...allB.map(e => e.timestamp || 0), 0);
+                    return tb - ta;
+                });
+
+            // Stats — count ALL individual CRT entries
+            let totalBull=0, totalBear=0, totalActive=0, totalTP=0, totalInv=0, totalCRTs=0;
             syms.forEach(sym => {
-                CRT_TFS.forEach(tf => {
-                    const d = crtState[sym]?.[tf];
-                    if (!d || !d.side) return;
-                    if (d.side === 'BULLISH') totalBull++;
-                    if (d.side === 'BEARISH') totalBear++;
-                    if (d.status === 'ACTIVE') totalActive++;
-                    if (d.status === 'TP_HIT') totalTP++;
-                    if (d.status === 'INVALID') totalInv++;
+                getAllEntries(sym).forEach(e => {
+                    totalCRTs++;
+                    if (e.side === 'BULLISH') totalBull++;
+                    if (e.side === 'BEARISH') totalBear++;
+                    if (e.status === 'ACTIVE') totalActive++;
+                    if (e.status === 'TP_HIT') totalTP++;
+                    if (e.status === 'INVALID') totalInv++;
                 });
             });
 
@@ -316,7 +326,7 @@
             document.getElementById('activePill').textContent = `🔵 ${totalActive} ACTIVE`;
             document.getElementById('tpPill').textContent = `🎯 ${totalTP} TP HIT`;
             document.getElementById('invPill').textContent = `❌ ${totalInv} INVALID`;
-            document.getElementById('totalPill').textContent = `🔄 ${syms.length} TRACKED`;
+            document.getElementById('totalPill').textContent = `🔄 ${totalCRTs} CRTs`;
 
             if (!syms.length) {
                 grid.innerHTML = '<p class="empty-state">Awaiting CRT signals...</p>';
@@ -325,67 +335,84 @@
 
             grid.innerHTML = '';
             syms.forEach(sym => {
-                const data = crtState[sym];
                 const type = getCardType(sym);
                 const cardCls = type === 'bull' ? 'card-bull' : type === 'bear' ? 'card-bear' : type === 'mixed' ? 'card-mixed' : 'card-idle';
+                const badgeHTML = type === 'bull' ? '<span class="card-badge-bull">🐂 BULLISH</span>' :
+                                  type === 'bear' ? '<span class="card-badge-bear">🐻 BEARISH</span>' :
+                                  type === 'mixed' ? '<span class="card-badge-mixed">🔀 MIXED</span>' :
+                                  '<span class="card-badge-idle">—</span>';
 
-                let badgeHTML;
-                if (type === 'bull') badgeHTML = '<span class="card-badge-bull">🐂 BULLISH</span>';
-                else if (type === 'bear') badgeHTML = '<span class="card-badge-bear">🐻 BEARISH</span>';
-                else if (type === 'mixed') badgeHTML = '<span class="card-badge-mixed">🔀 MIXED</span>';
-                else badgeHTML = '<span class="card-badge-idle">—</span>';
+                const allEntries = getAllEntries(sym);
+                const latestTs = Math.max(...allEntries.map(e => e.timestamp || 0), 0);
 
-                let latestTs = 0;
-                CRT_TFS.forEach(tf => { if (data[tf]?.timestamp > latestTs) latestTs = data[tf].timestamp; });
+                // Build per-TF sections
+                let tfSectionsHTML = '<div class="tf-sections">';
+                CRT_TFS.forEach(tf => {
+                    const entries = getTFEntries(sym, tf);
 
-                // TF cells — like storyline but 3 columns, each with own time
-let tfCells = '';
-CRT_TFS.forEach(tf => {
-    const d = data[tf];
-    const cellCls = tfCellCls(d);
-    const emoji = tfSideEmoji(d);
-    const statusHTML = statusBadgeHTML(d?.status);
-    const sideText = d?.side || 'NONE';
-    const tfTime = d?.timestamp ? fmtTime(d.timestamp) : '';
+                    // TF label
+                    tfSectionsHTML += `<div class="tf-label-header">${tf}</div>`;
 
-    tfCells += `
-        <div class="tf-cell ${cellCls}">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-                <span style="color:rgba(203,213,225,0.5);font-size:0.42rem;text-transform:uppercase;letter-spacing:.04em;">${tf}</span>
-                <span style="font-size:0.65rem;">${emoji}</span>
-            </div>
-            <div style="color:rgba(203,213,225,0.6);font-size:0.42rem;">${sideText}</div>
-            ${d?.side ? statusHTML : ''}
-            ${tfTime ? `<div style="color:rgba(203,213,225,0.7);font-size:0.48rem;font-weight:600;margin-top:4px;font-family:'JetBrains Mono',monospace;">🕐 ${tfTime}</div>` : ''}
-        </div>`;
-});
-                const alignBar = getAlignBarInfo(sym);
+                    if (entries.length === 0) {
+                        // Empty placeholder
+                        tfSectionsHTML += `<div class="crt-entry-row crt-row-none">
+                            <span style="font-size:0.45rem;color:#475569;font-family:'JetBrains Mono',monospace;">No CRT</span>
+                        </div>`;
+                    } else {
+                        // Sort newest first within this TF
+                        const sorted = [...entries].sort((a, b) => (b.timestamp||0) - (a.timestamp||0));
+                        sorted.forEach((e, idx) => {
+                            const cls   = rowCls(e.side);
+                            const emoji = sideEmoji(e.side);
+                            const badge = statusBadgeHTML(e.status);
+                            const time  = fmtTime(e.timestamp);
+                            // Show ×N badge only on the first row when there are multiple
+                            const multiBadge = (idx === 0 && sorted.length > 1)
+                                ? `<span class="crt-multi-badge">×${sorted.length}</span>` : '';
+
+                            tfSectionsHTML += `<div class="crt-entry-row ${cls}">
+                                <span class="crt-side-emoji">${emoji}</span>
+                                ${badge}
+                                ${multiBadge}
+                                <span class="crt-entry-time">🕐 ${time}</span>
+                            </div>`;
+                        });
+                    }
+                });
+                tfSectionsHTML += '</div>';
+
+                // Align bar summary
+                const active = allEntries.filter(e => e.status === 'ACTIVE').length;
+                const tp     = allEntries.filter(e => e.status === 'TP_HIT').length;
+                const inv    = allEntries.filter(e => e.status === 'INVALID').length;
+                const parts  = [];
+                if (active > 0) parts.push(`🔵 ${active} Active`);
+                if (tp > 0) parts.push(`🎯 ${tp} TP`);
+                if (inv > 0) parts.push(`❌ ${inv} Inv`);
+                const barCls = type === 'bull' ? 'align-bar-bull' : type === 'bear' ? 'align-bar-bear' : type === 'mixed' ? 'align-bar-mixed' : 'align-bar-none';
+                const barTxt = parts.length > 0 ? `${allEntries.length} CRT${allEntries.length!==1?'s':''} · ${parts.join(' · ')}` : '— No CRT signals';
 
                 grid.insertAdjacentHTML('beforeend', `
                     <div class="coin-card ${cardCls}">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                             <div>
                                 <div class="card-symbol">${sym}</div>
-                                <div class="card-time">🕐 ${latestTs ? fmtTime(latestTs) : 'N/A'}</div>
+                                <div class="card-time">🕐 Latest: ${latestTs ? fmtTime(latestTs) : 'N/A'}</div>
                             </div>
                             ${badgeHTML}
                         </div>
-                        <div class="tf-row">
-                            ${tfCells}
-                        </div>
-                        <div class="align-bar ${alignBar.cls}">${alignBar.txt}</div>
+                        ${tfSectionsHTML}
+                        <div class="align-bar ${barCls}">${barTxt}</div>
                     </div>`);
             });
         }
 
         function rebuildFeed() {
             const feed = document.getElementById('activityFeed');
-
             if (!crtLog.length) {
                 feed.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:rgba(148,163,184,0.3);text-align:center;padding:20px 0;">Awaiting CRT signals...</p>`;
                 return;
             }
-
             feed.innerHTML = crtLog.slice(0, 100).map(e => {
                 let cls;
                 if (e.action === 'CRT_TARGET') cls = 'log-card log-card-tp';
